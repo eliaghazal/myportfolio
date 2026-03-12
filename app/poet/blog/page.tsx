@@ -23,6 +23,7 @@ interface Post {
   readTime: string;
   available?: boolean;
   isAdmin?: boolean;
+  published?: boolean;
 }
 
 /* ── Seed posts (with real full content) ── */
