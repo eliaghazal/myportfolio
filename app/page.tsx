@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import gsap from "gsap";
+import { IntroVideoPlayer } from "./components/IntroVideoPlayer";
 
 /* ─── Intro lines ─────────────────────────────────────────── */
 const INTRO_LINES = [
@@ -407,7 +408,10 @@ export default function LandingPage() {
 
   /* ── JSX ── */
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000", overflow: "hidden" }}>
+    <>
+      {/* Cinematic intro video overlay — plays once on first visit */}
+      <IntroVideoPlayer />
+      <div style={{ position: "fixed", inset: 0, background: "#000", overflow: "hidden" }}>
 
       {/* Skip */}
       <div ref={skipRef} style={{
@@ -575,5 +579,6 @@ export default function LandingPage() {
       </div>
 
     </div>
+    </>
   );
 }
