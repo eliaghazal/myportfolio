@@ -6,14 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "render-video-v2": "npx remotion render TerminalToPaper out/intro-terminal-to-paper.mp4"
   },
   "dependencies": {
+    "@remotion/cli": "^4.0.435",
+    "@remotion/player": "^4.0.435",
     "@types/three": "^0.183.1",
     "gsap": "^3.14.2",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "remotion": "^4.0.435",
     "three": "^0.183.2"
   },
   "devDependencies": {
