@@ -345,8 +345,8 @@ export default function EngineerPage() {
   const h2Contact = useReveal();
 
   /* Fade refs */
-  const About   = useFadeIn(0);
-  const Work    = useFadeIn(0);
+  const eyebrowAbout   = useFadeIn(0);
+  const eyebrowWork    = useFadeIn(0);
   const eyebrowSkills  = useFadeIn(0);
   const eyebrowCreds   = useFadeIn(0);
   const eyebrowContact = useFadeIn(0);
