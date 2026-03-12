@@ -82,8 +82,11 @@ export const SEQ_FINAL_FADEOUT_START = SEQ_7_START + FADE_IN_FRAMES + SEQ_7_HOLD
 export const SEQ_FINAL_FADEOUT_DURATION = 30; // 1s fade
 
 // Total video duration
+// The 15-frame (0.5 s) buffer ensures the final fade-to-black completes fully
+// before the Remotion player fires its "ended" event, preventing any flash of
+// the underlying page before the overlay has dismissed.
 export const TOTAL_DURATION_FRAMES =
-  SEQ_FINAL_FADEOUT_START + SEQ_FINAL_FADEOUT_DURATION + 15; // small buffer
+  SEQ_FINAL_FADEOUT_START + SEQ_FINAL_FADEOUT_DURATION + 15;
 
 // ─── Audio timing ────────────────────────────────────────────────────────────
 // The drone runs from frame 0. It builds slowly until SEQ_SILENCE_START,

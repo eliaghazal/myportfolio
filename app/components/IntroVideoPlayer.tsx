@@ -76,7 +76,16 @@ export default function IntroVideoPlayer({ onComplete }: IntroVideoPlayerProps) 
     const player = playerRef.current;
     if (!player) return;
 
-    player.play();
+    // play() can be rejected by strict browser autoplay policies.
+    // If it fails, we dismiss immediately so the user isn't stuck on a
+    // silent black screen — they can always re-enable the intro later by
+    // clearing localStorage ("intro_video_seen").
+    try {
+      player.play();
+    } catch {
+      dismiss();
+      return;
+    }
 
     const handleEnded = () => dismiss();
     player.addEventListener("ended", handleEnded);
@@ -112,11 +121,12 @@ export default function IntroVideoPlayer({ onComplete }: IntroVideoPlayerProps) 
         }}
         controls={false}
         loop={false}
-        // Muted by default — browsers block autoplay with sound
+        // Muted by default — browsers block autoplay with sound. The user can
+        // unmute via the button below. autoPlay={false} disables Remotion's
+        // own autoplay so we can control playback manually via playerRef.play().
         initiallyMuted={true}
-        // Autoplay is triggered via playerRef.play() in useEffect above
         autoPlay={false}
-        // Disable built-in keyboard/click controls
+        // Disable built-in keyboard/click controls (handled at page level)
         clickToPlay={false}
         spaceKeyToPlayOrPause={false}
       />
