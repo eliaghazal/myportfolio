@@ -361,7 +361,7 @@ export default function EngineerPage() {
     background:`${accent}10`, color:accent, border:`1px solid ${accent}28`, transition:"background 0.2s",
   });
 
-  const eyebrow = (label: string, ref: React.RefObject<HTMLDivElement>) => (
+  const eyebrow = (label: string, ref: React.RefObject<HTMLDivElement | null>) => (
     <div ref={ref} style={{ ...mono, fontSize:10, letterSpacing:"0.35em", color:"rgba(57,255,20,0.65)",
       marginBottom:14, textTransform:"uppercase" }}>// {label}</div>
   );
