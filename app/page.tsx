@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import gsap from "gsap";
+
+/* ─── Remotion intro video player (client-only — no SSR) ─────── */
+const IntroVideoPlayer = dynamic(
+  () => import("./components/IntroVideoPlayer"),
+  { ssr: false }
+);
 
 /* ─── Intro lines ─────────────────────────────────────────── */
 const INTRO_LINES = [
@@ -263,6 +270,33 @@ export default function LandingPage() {
   const interactive = useRef(false);
   const navigating  = useRef(false);
 
+  // ── Cinematic intro video state ──────────────────────────────────────────
+  // showVideo: true while the Remotion overlay should be rendered
+  // gsapReady: true once the video is done/skipped and GSAP can begin
+  const [showVideo, setShowVideo] = useState(false);
+  const [gsapReady, setGsapReady] = useState(false);
+
+  // On mount: check localStorage — if seen before, skip straight to GSAP
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem("intro_video_seen");
+      if (seen) {
+        setGsapReady(true);
+      } else {
+        setShowVideo(true);
+      }
+    } catch {
+      // localStorage unavailable — skip video gracefully
+      setGsapReady(true);
+    }
+  }, []);
+
+  // Called when the video ends or is skipped
+  const handleVideoComplete = useCallback(() => {
+    setShowVideo(false);
+    setGsapReady(true);
+  }, []);
+
   const showFinal = useCallback(() => {
     gsap.set(introRef.current,  { display: "none" });
     gsap.set(cursorRef.current, { opacity: 0 });
@@ -281,6 +315,9 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    // Wait for the cinematic intro video to finish (or be skipped)
+    if (!gsapReady) return;
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       showFinal(); return;
     }
@@ -367,7 +404,7 @@ export default function LandingPage() {
       hwRef.current?.destroy();
       tl.kill();
     };
-  }, [showFinal]);
+  }, [showFinal, gsapReady]);
 
   const onHover = useCallback((side: "left" | "right" | "none") => {
     if (!interactive.current) return;
@@ -408,6 +445,11 @@ export default function LandingPage() {
   /* ── JSX ── */
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000", overflow: "hidden" }}>
+
+      {/* ── Cinematic intro video overlay (plays once, before GSAP intro) ── */}
+      {showVideo && (
+        <IntroVideoPlayer onComplete={handleVideoComplete} />
+      )}
 
       {/* Skip */}
       <div ref={skipRef} style={{
