@@ -279,7 +279,7 @@ const TERMINAL_COMMANDS: Record<string, () => string[]> = {
     "  echo [text]       Echo back",
   ],
   about: () => [
-    "  Name:       Elia Alghazal",
+    "  Name:       Elia Ghazal",
     "  Location:   Lebanon → the world",
     "  Role:       Engineer / Poet / Builder",
     "  School:     AUST Computer Science (2026)",
@@ -320,7 +320,7 @@ const TERMINAL_COMMANDS: Record<string, () => string[]> = {
     "  DELF B2                     République française          (Oct 2022)",
   ],
   resume: () => [
-    "  Elia Alghazal — Computer Science @ AUST (2026)",
+    "  Elia Ghazal — Computer Science @ AUST (2026)",
     "  ─────────────────────────────────────────────",
     "  ✦  9+ projects built and deployed",
     "  ✦  7 certifications earned",
@@ -331,7 +331,7 @@ const TERMINAL_COMMANDS: Record<string, () => string[]> = {
     "",
     "  [Download PDF] → linkedin.com/in/eliaghazal",
   ],
-  whoami: () => ["  elia_alghazal"],
+  whoami: () => ["  elia_ghazal"],
   pwd:    () => ["  /home/elia/portfolio"],
   ls:     () => ["  projects/  skills/  about.txt  contact.md  resume.pdf  lab/"],
   "cat about.txt": () => TERMINAL_COMMANDS.about(),
@@ -742,7 +742,7 @@ export default function EngineerPage() {
             fontSize:"clamp(52px,10.5vw,140px)", letterSpacing:"0.04em", lineHeight:0.9,
             color:"#fff", marginBottom:"clamp(20px,3vw,32px)" }}>
             ELIA<br />
-            <span style={{ color:"#39ff14", animation:"breathe 4s ease-in-out infinite" }}>ALGHAZAL</span>
+            <span style={{ color:"#39ff14", animation:"breathe 4s ease-in-out infinite" }}>GHAZAL</span>
           </h1>
 
           {/* Typewriter */}
@@ -1222,7 +1222,7 @@ export default function EngineerPage() {
           display:"flex", justifyContent:"space-between", alignItems:"center",
           maxWidth:1100, margin:"0 auto", flexWrap:"wrap", gap:12 }}>
           <span style={{ ...mono, fontSize:10, letterSpacing:"0.15em", color:"rgba(255,255,255,0.15)" }}>
-            ELIA ALGHAZAL © 2026
+            ELIA GHAZAL © 2026
           </span>
           <Link href="/" style={{ ...mono, fontSize:10, letterSpacing:"0.15em",
             color:"rgba(255,255,255,0.15)", textDecoration:"none", transition:"color 0.2s" }}
