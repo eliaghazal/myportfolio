@@ -179,7 +179,7 @@ export default function PoetPage() {
         {/* Name + meta */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <div style={{ fontSize: "clamp(15px,1.8vw,22px)", fontWeight: 600, letterSpacing: "-0.01em", marginBottom: 4 }}>Elia Alghazal</div>
+            <div style={{ fontSize: "clamp(15px,1.8vw,22px)", fontWeight: 600, letterSpacing: "-0.01em", marginBottom: 4 }}>Elia Ghazal</div>
             <div style={{ ...mono, fontSize: 10, letterSpacing: "0.22em", color: dim, textTransform: "uppercase" }}>Whispers of the Eclipse — 2024</div>
           </div>
           <button onClick={() => scrollTo("poems")} style={{
@@ -259,7 +259,7 @@ export default function PoetPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/book-cover.png"
-            alt="Whispers of the Eclipse — Elia Alghazal"
+            alt="Whispers of the Eclipse — Elia Ghazal"
             style={{
               width: "clamp(130px,14vw,180px)",
               aspectRatio: "3/4",
@@ -342,7 +342,7 @@ export default function PoetPage() {
                     <div style={{ fontSize: "clamp(13px,1.3vw,16px)", lineHeight: 2.1, whiteSpace: "pre-line", color: dim, maxWidth: 560 }}>
                       {poem.lines}
                     </div>
-                    <div style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: "rgba(28,24,20,0.22)", marginTop: 28 }}>— Whispers of the Eclipse, Elia Alghazal</div>
+                    <div style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: "rgba(28,24,20,0.22)", marginTop: 28 }}>— Whispers of the Eclipse, Elia Ghazal</div>
                   </>
                 );
               })()}
@@ -436,7 +436,7 @@ export default function PoetPage() {
 
           {/* Footer */}
           <div style={{ borderTop: `1px solid ${border}`, marginTop: 64, paddingTop: 28, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <span style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint }}>ELIA ALGHAZAL © 2026</span>
+            <span style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint }}>ELIA GHAZAL © 2026</span>
             <div style={{ display: "flex", gap: 24 }}>
               <Link href="/engineer" style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint, textDecoration: "none", transition: "color 0.2s" }}
                 onMouseEnter={e => (e.currentTarget.style.color = rust)}

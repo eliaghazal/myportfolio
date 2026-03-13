@@ -133,7 +133,7 @@ function PostReader({ post, onClose }: { post: Post; onClose: () => void }) {
 
           {/* Footer inside drawer */}
           <div style={{ marginTop: 56, paddingTop: 24, borderTop: `1px solid ${border}` }}>
-            <div style={{ ...mono, fontSize: 9, letterSpacing: "0.18em", color: faint }}>— ELIA ALGHAZAL</div>
+            <div style={{ ...mono, fontSize: 9, letterSpacing: "0.18em", color: faint }}>— ELIA GHAZAL</div>
           </div>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function BlogPage() {
 
         {/* Footer */}
         <div style={{ borderTop: `1px solid ${border}`, marginTop: 64, paddingTop: 28, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <span style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint }}>ELIA ALGHAZAL © 2026</span>
+          <span style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint }}>ELIA GHAZAL © 2026</span>
           <Link href="/poet" style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint, textDecoration: "none", transition: "color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.color = rust)} onMouseLeave={e => (e.currentTarget.style.color = faint)}>← Back to Poet</Link>
         </div>

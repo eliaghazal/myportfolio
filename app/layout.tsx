@@ -48,10 +48,10 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "Elia Alghazal",
+  title: "Elia Ghazal",
   description: "Engineer. Poet. Builder of impossible things.",
   openGraph: {
-    title: "Elia Alghazal",
+    title: "Elia Ghazal",
     description: "Engineer. Poet. Builder of impossible things.",
   },
 };
