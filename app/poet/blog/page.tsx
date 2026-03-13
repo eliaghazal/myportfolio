@@ -26,90 +26,7 @@ interface Post {
   published?: boolean;
 }
 
-/* ── Seed posts (with real full content) ── */
-const SEED_POSTS: Post[] = [
-  {
-    id: "001",
-    number: "001",
-    date: "Winter 2024",
-    tag: "Essay",
-    title: "Writing as Sanctuary",
-    excerpt: "Writing has always been my sanctuary — a guiding light through the darkest times. Without it, I would never have found the happiness that now colors my world. This is what I wrote in the introduction of the book. I meant every word.",
-    readTime: "4 min",
-    available: true,
-    content: `Writing has always been my sanctuary — a guiding light through the darkest times. Without it, I would never have found the happiness that now colors my world.
 
-This is what I wrote in the introduction of Whispers of the Eclipse. I meant every word. Still do.
-
-I started writing seriously at fifteen. Not because I was talented — I didn't know if I was. I started because I had nowhere else to put what I was feeling. My town in Lebanon was small. The people around me were kind, mostly. But there was no space, not really, for the kind of interior noise I carried.
-
-So I wrote. I wrote about the friends who left without explanation. About the nights I counted the ceiling tiles instead of sleeping. About the strange pride of surviving things that weren't supposed to be survived.
-
-What surprised me was that writing didn't just record pain — it transformed it. Something in the act of finding words for a feeling makes the feeling smaller. Not gone. Smaller. Holdable.
-
-I think this is why I can't stop. Not the poems, not the notes I scrawl at 2am, not this. The page is the one place where everything I've been through becomes material rather than weight.
-
-If you've read the collection, you've already seen the most honest version of me. Fifteen to nineteen years old, trying to make sense of things I had no framework for. I didn't clean it up. I'm glad I didn't.
-
-Write. Even when it hurts. Especially when it hurts.`,
-  },
-  {
-    id: "002",
-    number: "002",
-    date: "Autumn 2024",
-    tag: "Reflection",
-    title: "On the Eclipse as Symbol",
-    excerpt: "The eclipse doesn't mean darkness wins. It means light and shadow agree, for a moment, to share the same sky. That's what the collection is really about — not the absence of light, but what we learn to do inside its absence.",
-    readTime: "6 min",
-    available: true,
-    content: `The eclipse doesn't mean darkness wins. It means light and shadow agree, for a moment, to share the same sky.
-
-That's what I kept returning to when I was choosing a title for the collection. Not an eclipse as catastrophe. Not an eclipse as the end of something. An eclipse as the most honest moment — the moment when two opposing forces stop pretending the other doesn't exist.
-
-A lot of the poems in Whispers of the Eclipse were written during periods where I felt covered over. Not destroyed. Covered. There's a difference. The sun doesn't die during an eclipse. It's still there, burning exactly as it was before. It just can't reach you directly for a while.
-
-I think that's a more accurate description of what depression, grief, and loneliness actually feel like than the language we usually use. We say darkness. We say loss. But what I kept experiencing was more like being in the shadow of something — still present, still myself, just temporarily unreachable.
-
-The poem "Circle of Love" gets at this most directly: *You're the sun, and I am the moon — together we're the eclipse.* There's no villain there. No hero. Just two things that, when they align a certain way, create something other people stop and stare at.
-
-I want the collection to be read that way. Not as a document of suffering, but as a document of co-existence — light and shadow, engineer and poet, Lebanese and world-facing, broken and building.
-
-Come all. We're witnessing the eclipse.`,
-  },
-  {
-    id: "003",
-    number: "003",
-    date: "Summer 2024",
-    tag: "Craft",
-    title: "Why I Write in Images, Not Explanations",
-    excerpt: "The first rule I learned: don't explain the emotion. Show the room where it happened. Show the thing on the table. Let the reader bring their own weight to it.",
-    readTime: "5 min",
-    available: false,
-    content: "",
-  },
-  {
-    id: "004",
-    number: "004",
-    date: "Spring 2024",
-    tag: "Personal",
-    title: "Being Lebanese and Writing It",
-    excerpt: '"Land of God" was the hardest poem in the collection to finish. Not because of the words — but because every time I thought I had written its ending, something happened that made the ending wrong again.',
-    readTime: "8 min",
-    available: false,
-    content: "",
-  },
-  {
-    id: "005",
-    number: "005",
-    date: "Winter 2023",
-    tag: "Essay",
-    title: "The Engineer and the Poet Are the Same Person",
-    excerpt: "People find it strange. Code and poetry. Logic and feeling. But I think they're more similar than anyone admits — both are systems for making the invisible visible.",
-    readTime: "7 min",
-    available: false,
-    content: "",
-  },
-];
 
 /* ── Hooks ── */
 function makeObs(cb: () => void) {
@@ -227,7 +144,7 @@ function PostReader({ post, onClose }: { post: Post; onClose: () => void }) {
 /* ── Page ── */
 export default function BlogPage() {
   const [scrolled, setScrolled]       = useState(false);
-  const [adminPosts, setAdminPosts]   = useState<Post[]>([]);
+  const [posts, setPosts]             = useState<Post[]>([]);
   const [openPost, setOpenPost]       = useState<Post | null>(null);
 
   useEffect(() => {
@@ -236,21 +153,18 @@ export default function BlogPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/posts")
+    fetch("/api/posts?all=true")
       .then(r => r.ok ? r.json() : [])
       .then((data: Array<Post & { read_time?: string }>) => {
-        setAdminPosts(
-          data
-            .filter(x => x.published ?? true)
-            .map(x => ({ ...x, readTime: x.read_time ?? x.readTime ?? "", isAdmin: true, available: true }))
+        setPosts(
+          data.map(x => ({ ...x, readTime: x.read_time ?? x.readTime ?? "" }))
         );
       })
-      .catch(() => { /* silently fall back to seed posts */ });
+      .catch(() => {});
   }, []);
 
   const handleOpen = (post: Post) => {
-    // "Soon" posts — no content yet
-    if (post.available === false) return;
+    if (!post.published || !post.content) return;
     setOpenPost(post);
   };
 
@@ -287,53 +201,32 @@ export default function BlogPage() {
           </p>
         </div>
 
-        {/* Admin posts first */}
-        {adminPosts.length > 0 && (
-          <div style={{ marginBottom: 2 }}>
-            <div style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: rustDim, padding: "8px 0", borderBottom: `1px solid ${border}`, marginBottom: 1 }}>NEW</div>
-            {adminPosts.map(p => (
-              <div key={p.id}
+        {/* All posts — unified list */}
+        <div ref={postsRef} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          {posts.map(post => {
+            const available = !!(post.published && post.content);
+            const numDisplay = /^\d+$/.test(post.id) ? post.id : "";
+            return (
+              <div key={post.id}
                 className="post-row"
-                data-available="true"
-                onClick={() => handleOpen(p)}
-                style={{ padding: "clamp(20px,3vw,34px)", borderLeft: `2px solid ${rust}`, background: "rgba(184,92,56,0.03)", display: "grid", gridTemplateColumns: "60px 1fr auto", gap: "clamp(14px,3vw,38px)", alignItems: "start", marginBottom: 1, cursor: "pointer" }}>
-                <div style={{ ...mono, fontSize: 11, color: faint, paddingTop: 2 }}>NEW</div>
+                data-available={String(available)}
+                onClick={() => handleOpen(post)}
+                style={{ padding: "clamp(20px,3vw,34px)", borderLeft: `2px solid ${available ? rust : border}`, background: available ? "rgba(184,92,56,0.03)" : "transparent", display: "grid", gridTemplateColumns: "60px 1fr auto", gap: "clamp(14px,3vw,38px)", alignItems: "start", marginBottom: 1, cursor: available ? "pointer" : "default" }}>
+                <div style={{ ...mono, fontSize: 11, color: faint, paddingTop: 2 }}>{numDisplay}</div>
                 <div>
                   <div style={{ display: "flex", gap: 12, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", padding: "2px 8px", background: `rgba(184,92,56,0.1)`, color: rust, border: `1px solid rgba(184,92,56,0.2)` }}>{p.tag}</span>
-                    <span style={{ ...mono, fontSize: 9, letterSpacing: "0.15em", color: dim }}>{p.date}</span>
+                    <span style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", padding: "2px 8px", background: `rgba(184,92,56,0.1)`, color: rust, border: `1px solid rgba(184,92,56,0.2)` }}>{post.tag}</span>
+                    <span style={{ ...mono, fontSize: 9, letterSpacing: "0.15em", color: dim }}>{post.date}</span>
                   </div>
-                  <h2 className="post-title" style={{ fontWeight: 700, fontSize: "clamp(15px,2vw,22px)", letterSpacing: "-0.01em", color: ink, marginBottom: 10 }}>{p.title}</h2>
-                  <p style={{ fontSize: "clamp(12px,1.1vw,14px)", color: dim, lineHeight: 1.8, maxWidth: 560 }}>{p.excerpt}</p>
+                  <h2 className="post-title" style={{ fontWeight: 700, fontSize: "clamp(15px,2vw,22px)", letterSpacing: "-0.01em", color: ink, marginBottom: 10 }}>{post.title}</h2>
+                  <p style={{ fontSize: "clamp(12px,1.1vw,14px)", color: dim, lineHeight: 1.8, maxWidth: 560 }}>{post.excerpt}</p>
                 </div>
-                <div style={{ ...mono, fontSize: 9, letterSpacing: "0.15em", color: rust, whiteSpace: "nowrap", paddingTop: 4 }}>{p.readTime} →</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Seed posts */}
-        <div ref={postsRef} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          {SEED_POSTS.map(post => (
-            <div key={post.id}
-              className="post-row"
-              data-available={String(post.available)}
-              onClick={() => handleOpen(post)}
-              style={{ padding: "clamp(20px,3vw,34px)", borderLeft: `2px solid ${border}`, display: "grid", gridTemplateColumns: "60px 1fr auto", gap: "clamp(14px,3vw,38px)", alignItems: "start", cursor: post.available ? "pointer" : "default" }}>
-              <div style={{ ...mono, fontSize: 11, color: faint, paddingTop: 2 }}>{post.number}</div>
-              <div>
-                <div style={{ display: "flex", gap: 12, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", padding: "2px 8px", background: `rgba(184,92,56,0.1)`, color: rust, border: `1px solid rgba(184,92,56,0.2)` }}>{post.tag}</span>
-                  <span style={{ ...mono, fontSize: 9, letterSpacing: "0.15em", color: dim }}>{post.date}</span>
+                <div style={{ ...mono, fontSize: 9, letterSpacing: "0.15em", color: available ? rust : faint, whiteSpace: "nowrap", paddingTop: 4 }}>
+                  {available ? `${post.readTime} →` : "Soon"}
                 </div>
-                <h2 className="post-title" style={{ fontWeight: 700, fontSize: "clamp(15px,2vw,22px)", letterSpacing: "-0.01em", color: ink, marginBottom: 10 }}>{post.title}</h2>
-                <p style={{ fontSize: "clamp(12px,1.1vw,14px)", color: dim, lineHeight: 1.8, maxWidth: 560 }}>{post.excerpt}</p>
               </div>
-              <div style={{ ...mono, fontSize: 9, letterSpacing: "0.15em", color: post.available ? rust : faint, whiteSpace: "nowrap", paddingTop: 4 }}>
-                {post.available ? `${post.readTime} →` : "Soon"}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Footer */}

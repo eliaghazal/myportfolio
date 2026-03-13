@@ -169,22 +169,6 @@ function SortingDemo() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SEED EXPERIMENTS
-═══════════════════════════════════════════════════════════════ */
-const SEED_EXPERIMENTS: Experiment[] = [
-  {
-    id: "sorting",
-    title: "Sorting Algorithm Visualizer",
-    description: "Real-time array sorting visualizer. Watch Bubble Sort, Quick Sort, and Merge Sort race each other — bars animate as comparisons and swaps happen. Adjustable speed and size.",
-    category: "Algorithms",
-    tech: ["TypeScript", "Canvas API", "Algorithm Design"],
-    status: "LIVE",
-    accent: "#f59e0b",
-    demo: <SortingDemo />,
-  },
-];
-
-/* ═══════════════════════════════════════════════════════════════
    CARD
 ═══════════════════════════════════════════════════════════════ */
 function parseTechArray(tech: string[] | string): string[] {
@@ -275,7 +259,7 @@ function mapDbExp(e: { id: string; title: string; description: string; category:
 ═══════════════════════════════════════════════════════════════ */
 export default function LabPage() {
   const [scrolled, setScrolled]   = useState(false);
-  const [dbExps, setDbExps]       = useState<ReturnType<typeof mapDbExp>[]>([]);
+  const [experiments, setExperiments] = useState<ReturnType<typeof mapDbExp>[]>([]);
   const headRef                   = useFade(0);
   const listRef                   = useFade(100);
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
@@ -288,7 +272,7 @@ export default function LabPage() {
   useEffect(() => {
     fetch("/api/lab")
       .then(r => r.ok ? r.json() : [])
-      .then((data: Parameters<typeof mapDbExp>[0][]) => setDbExps(data.map(mapDbExp)))
+      .then((data: Parameters<typeof mapDbExp>[0][]) => setExperiments(data.map(mapDbExp)))
       .catch(() => {});
   }, []);
 
@@ -320,15 +304,18 @@ export default function LabPage() {
           </p>
         </div>
 
-        {/* Seed experiments */}
-        <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 48 }}>
-          {SEED_EXPERIMENTS.map(exp => (
-            <ExperimentCard key={exp.id} exp={exp} accent={exp.accent} />
-          ))}
+        {/* All experiments — unified list */}
+        <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {experiments.map(exp => {
+            const expWithDemo = exp.id === "sorting"
+              ? { ...exp, demo: <SortingDemo /> } as unknown as Experiment
+              : exp as unknown as Experiment;
+            return <ExperimentCard key={exp.id} exp={expWithDemo} accent={exp.accent} />;
+          })}
         </div>
 
-        {/* More to come */}
-        {dbExps.length === 0 && (
+        {/* More to come placeholder — only shown when no experiments loaded */}
+        {experiments.length === 0 && (
           <div style={{ padding: "32px 28px", border: `1px dashed ${border}`, textAlign: "center" }}>
             <div style={{ ...mono, fontSize: 11, letterSpacing: "0.3em", color: gnDim, marginBottom: 10 }}>
               MORE EXPERIMENTS COMING SOON
@@ -337,18 +324,6 @@ export default function LabPage() {
               Caesar Cipher Playground, DFA Minimizer Visualizer, and more are currently in the pipeline.
             </p>
           </div>
-        )}
-
-        {/* DB experiments */}
-        {dbExps.length > 0 && (
-          <>
-            <div style={{ ...mono, fontSize: 10, letterSpacing: "0.3em", color: gnDim, marginBottom: 16, paddingTop: 24, borderTop: `1px solid ${border}` }}>— FROM THE ADMIN PANEL</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {dbExps.map(exp => (
-                <ExperimentCard key={exp.id} exp={exp as unknown as Experiment} accent={exp.accent} />
-              ))}
-            </div>
-          </>
         )}
 
         {/* Footer */}
