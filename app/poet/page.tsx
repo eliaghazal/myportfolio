@@ -118,7 +118,7 @@ export default function PoetPage() {
   const contactHead = useFade(0);
   const contactBody = useFade(100);
 
-  const sec: React.CSSProperties = { padding: "clamp(56px,7vw,88px) clamp(20px, 8vw, 120px)" };
+  const sec: React.CSSProperties = { padding: "clamp(56px,7vw,88px) clamp(20px,8vw,120px)" };
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
 
   return (
