@@ -209,7 +209,7 @@ function Lightbox({ item, onClose }: { item: GalleryItem; onClose: () => void })
   return (
     <div onClick={onClose} style={{
       position: "fixed", inset: 0, zIndex: 2000,
-      background: "rgba(5,4,3,0.94)", backdropFilter: "blur(20px)",
+      background: "rgba(5,4,3,0.7)", backdropFilter: "blur(20px)",
       display: "flex", alignItems: "center", justifyContent: "center",
       opacity: vis ? 1 : 0, transition: "opacity 0.35s ease",
       padding: "clamp(16px,4vw,48px)",
@@ -243,7 +243,7 @@ function Lightbox({ item, onClose }: { item: GalleryItem; onClose: () => void })
             ) : null}
           </div>
           <div style={{ marginTop: 12, paddingLeft: 2 }}>
-            {item.caption && <div style={{ fontFamily: "var(--font-space)", fontWeight: 600, fontSize: 13, color: "#1c1814", marginBottom: 3 }}>{item.caption}</div>}
+            {item.caption && <div style={{ fontFamily: "var(--font-space)", fontWeight: 600, fontSize: 15, color: "#1c1814", marginBottom: 3 }}>{item.caption}</div>}
             {item.poem && <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(184,92,56,0.6)", letterSpacing: "0.18em" }}>— {item.poem}</div>}
           </div>
         </div>
@@ -285,6 +285,16 @@ export default function GalleryPage() {
         setItems(data.map(item => ({ ...item, imageUrl: item.image_url ?? item.imageUrl })));
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const prev = { html: document.documentElement.style.overscrollBehavior, body: document.body.style.overscrollBehavior };
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overscrollBehavior = "none";
+    return () => {
+      document.documentElement.style.overscrollBehavior = prev.html;
+      document.body.style.overscrollBehavior = prev.body;
+    };
   }, []);
 
   // Measure tile dimensions for seamless wrap-around
@@ -342,13 +352,12 @@ export default function GalleryPage() {
     isDragging.current = true; clickGuard.current = false;
     dragStart.current = { mx: e.clientX, my: e.clientY, px: posRef.current.x, py: posRef.current.y };
     lastMouse.current = { x: e.clientX, y: e.clientY, t: performance.now() };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging.current) return;
     const dx = e.clientX - dragStart.current.mx;
     const dy = e.clientY - dragStart.current.my;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) clickGuard.current = true;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clickGuard.current = true;
     const now = performance.now();
     const dt = Math.max(now - lastMouse.current.t, 1);
     velRef.current.x = (e.clientX - lastMouse.current.x) / dt * 16;
@@ -388,7 +397,7 @@ export default function GalleryPage() {
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
 
   return (
-    <div style={{ background: "#0c0a09", color: "#f4f1ec", width: "100%", height: "100vh", overflow: "hidden", fontFamily: "var(--font-space)" }}>
+    <div style={{ background: "#0c0a09", color: "#f4f1ec", width: "100%", height: "100vh", overflow: "hidden", fontFamily: "var(--font-space)", overscrollBehavior: "none" }}>
       <style>{`
         @keyframes orbFloat0 {
           0%,100%{transform:translate(0,0) scale(1);opacity:0.6}
@@ -437,22 +446,22 @@ export default function GalleryPage() {
       >
         {/* Tilted + scaled canvas like rodeo.film */}
         <div style={{
-          transform: "scale(1.15) rotate(3deg)",
+          transform: "scale(1.05) rotate(3deg)",
           transformOrigin: "center center",
-          position: "absolute", inset: "-15%",
-          width: "130%", height: "130%",
+          position: "absolute", inset: "-10%",
+          width: "120%", height: "120%",
         }}>
           <div ref={innerRef} style={{ willChange: "transform" }}>
             {/* 2×2 tile arrangement — modulo wrapping makes this infinite in all 4 directions */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, max(110vw, 1600px))" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, max(90vw, 1200px))" }}>
               {[0, 1, 2, 3].map(tileIdx => (
                 <div key={tileIdx} ref={tileIdx === 0 ? tileRef : undefined}>
                   <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(4, 1fr)",
-                    gridAutoRows: "clamp(200px, 24vw, 340px)",
+                    gridAutoRows: "clamp(140px, 18vw, 260px)",
                     gap: 2,
-                    width: "max(110vw, 1600px)",
+                    width: "max(90vw, 1200px)",
                   }}>
                     {tileItems.map((item, i) => {
                       const size = CELL_SIZES[i % CELL_SIZES.length];
