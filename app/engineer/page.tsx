@@ -2,76 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  DEFAULT_FEATURED, DEFAULT_OTHER_PROJECTS, DEFAULT_SKILLS,
+  DEFAULT_CERTS, DEFAULT_AWARDS, DEFAULT_STATS,
+  type FeaturedProject, type OtherProject, type Skill, type Cert, type Award, type Stat,
+} from "@/lib/defaults";
 
 /* ═══════════════════════════════════════════════════════════════
    DATA
 ═══════════════════════════════════════════════════════════════ */
 const ROLES = ["Engineer.", "AI Developer.", "IoT Architect.", "Builder.", "Problem Solver.", "Lebanese."];
-
-const FEATURED = [
-  { id:"crashlens",     title:"CrashLens",               subtitle:"IoT + AI + Real-Time Dashboards",  status:"ACTIVE",    period:"Nov 2025 – Present", accent:"#39ff14",
-    problem:"Road accidents generate critical data — but it disappears before it reaches insurers, police, or EMTs.",
-    solution:"End-to-end crash detection ecosystem. Edge hardware captures the moment of impact and packages video, GPS, and sensor data — routing it to role-based dashboards for every stakeholder in real time.",
-    impact:"Serves insurance firms, fleet operators, traffic police, and first responders from a single unified pipeline.",
-    tech:["Raspberry Pi","4G Module","IMU / GPS","Python","Computer Vision","React","Node.js"], link:null },
-  { id:"mysterypersona",title:"MysteryPersona Deck",      subtitle:"Mystical E-Commerce Platform",     status:"LIVE",      period:"2024",               accent:"#a78bfa",
-    problem:"Most e-commerce is purely transactional. Users click, buy, and leave. No experience. No identity.",
-    solution:"Brand-driven platform where users purchase 'draws' — single, triple, or lifetime — to receive persona-style cards and a guided self-discovery journey. Commerce as storytelling.",
-    impact:"Live at mysterypersona.me with full payment flow, tiered product logic, and strong brand identity throughout.",
-    tech:["React","Stripe","Node.js","MongoDB","Figma"], link:"https://www.mysterypersona.me" },
-  { id:"fakenews",      title:"Fake News Detector",       subtitle:"NLP + Transformer Pipeline",       status:"COMPLETED", period:"2025",               accent:"#f59e0b",
-    problem:"Misinformation spreads exponentially faster than human fact-checkers can respond.",
-    solution:"DistilBERT-based transformer pipeline classifying text as misleading or synthetic — with a practical UI for real-time testing and an ensemble approach for robustness.",
-    impact:"Transformer-level accuracy on both fake news and deepfake text detection with a production-ready interface.",
-    tech:["Python","DistilBERT","PyTorch","scikit-learn","Pandas","React"], link:null },
-  { id:"student",       title:"Student Management System",subtitle:"🥇 1st Place — AUST Coding Expo",  status:"AWARD",     period:"2024",               accent:"#fbbf24",
-    problem:"Academic institutions run on spreadsheets and fragmented manual records. Errors compound. Data is impossible to query.",
-    solution:"Complete student administration platform: profiles, enrollment, academic records, role-based access, and intelligent search — built for reliability and clean UX from the ground up.",
-    impact:"Earned the highest score at AUST's Coding Expo. Built for production-level data handling and real institutional use.",
-    tech:["Java","Spring Boot","SQL","REST API","React"], link:null },
-];
-
-const CARDS = [
-  { title:"Automata Visualizer",       desc:"Interactive DFA/NFA builder with Hopcroft minimization — Theory of Computation capstone.", tech:["JavaScript","React","Algorithm Design"], badge:null },
-  { title:"LU Decomposition Solver",   desc:"Step-by-step educational web tool for LU decomposition and linear system solving.",         tech:["JavaScript","Math.js","HTML/CSS"],      badge:null },
-  { title:"System Security Suite",     desc:"Kerberos-style auth, RSA components, SQL injection demonstrations and mitigations.",         tech:["Python","Cryptography","SQL"],          badge:null },
-  { title:"Library Management System", desc:"Full circulation: cataloging, availability, borrowing, returns, member management.",         tech:["Java","Spring Boot","SQL"],             badge:"🥈 2nd Place — Coding Expo" },
-  { title:"This Portfolio",            desc:"Cinematic dual-world portfolio — code rain, handwriting animations, GSAP sequences.",        tech:["Next.js","TypeScript","GSAP","Canvas"], badge:null },
-];
-
-const SKILLS = [
-  { cat:"Languages",      items:["Python","JavaScript","TypeScript","Java","Kotlin","C++","Swift","HTML / CSS"] },
-  { cat:"AI / ML",        items:["PyTorch","DistilBERT","scikit-learn","Pandas","NumPy","Computer Vision","Deep Learning"] },
-  { cat:"Backend",        items:["Spring Boot","REST API","Microservices","Hibernate","Node.js","JAX-RS","Maven"] },
-  { cat:"Frontend",       items:["React","Next.js","Tailwind CSS","GSAP","Canvas API"] },
-  { cat:"Mobile",         items:["Flutter","Kotlin Android","Swift iOS"] },
-  { cat:"IoT / Hardware", items:["Raspberry Pi","4G Module","IMU / GPS","Edge AI","Camera Modules"] },
-  { cat:"DevOps & Tools", items:["Git / GitHub","Docker","GitLab","Linux / UNIX","Jupyter"] },
-  { cat:"Databases",      items:["SQL","MongoDB","PostgreSQL"] },
-];
-
-const CERTS = [
-  { name:"TOEFL iBT",                         issuer:"ETS",                    date:"Sep 2025", detail:"Score: 99 / 120",                  accent:"#3b82f6", link:null },
-  { name:"CCNA: Switching, Routing & Essentials",issuer:"Cisco",               date:"Jan 2025", detail:"Routing, switching, VLANs, security", accent:"#39ff14", link:"https://www.credly.com/badges/baa3c3c1-e692-4972-8150-9782d6d2c903" },
-  { name:"Introduction to Networks",           issuer:"Cisco",                  date:"Dec 2024", detail:"CCNA pathway — Networking Academy",  accent:"#39ff14", link:"https://www.credly.com/badges/baa3c3c1-e692-4972-8150-9782d6d2c903" },
-  { name:"IT Essentials",                      issuer:"Cisco",                  date:"Feb 2024", detail:"Hardware, networking, troubleshooting",accent:"#39ff14", link:"https://www.credly.com/badges/e06d14d2-9f70-49a4-a39b-683052b2b93c" },
-  { name:"IT Specialist — Python",             issuer:"Certiport / Pearson VUE",date:"Jan 2024", detail:"Python programming validation",       accent:"#f59e0b", link:null },
-  { name:"ECPE — C2 Proficiency",              issuer:"University of Michigan", date:"Dec 2023", detail:"English at C2 expert level",           accent:"#a78bfa", link:null },
-  { name:"DELF B2",                            issuer:"République française",   date:"Oct 2022", detail:"French at B2 independent level",       accent:"#60a5fa", link:null },
-];
-
-const AWARDS = [
-  { icon:"◆",  title:"Honor's List",            body:"AUST", detail:"Spring 2024 – 2025" },
-  { icon:"🥇", title:"1st Place — Coding Expo",  body:"AUST", detail:"Student Management System · Highest Score" },
-  { icon:"🥈", title:"2nd Place — Coding Expo",  body:"AUST", detail:"Library Management System" },
-];
-
-const STATS = [
-  { label:"Certifications", value:7,    suffix:"",   prefix:"" },
-  { label:"Projects Built", value:9,    suffix:"+",  prefix:"" },
-  { label:"TOEFL Score",    value:99,   suffix:"/120",prefix:"" },
-  { label:"Coding Expo",    value:1,    suffix:"st",  prefix:"#" },
-];
 
 /* ═══════════════════════════════════════════════════════════════
    CODE RAIN
@@ -385,7 +325,7 @@ const TERMINAL_COMMANDS: Record<string, () => string[]> = {
     "  ✦  9+ projects built and deployed",
     "  ✦  7 certifications earned",
     "  ✦  1st Place — AUST Coding Expo (Student Mgmt System)",
-    "  ✦  Published author: Whispers of the Eclipse (Amazon UK)",
+    "  ✦  Published author: Whispers of the Eclipse",
     "  ✦  Founder: TwoFoundersLab (Crypto, DFA Minimizer, ...)",
     "  ✦  Fluent: Arabic, English (C2), French (B2), Italian",
     "",
@@ -649,6 +589,29 @@ export default function EngineerPage() {
   const role        = useTypewriter(ROLES);
   const [scrolled, setScrolled] = useState(false);
 
+  /* Content state — initialised with hardcoded defaults, overridden by DB if set */
+  const [featured, setFeatured]     = useState<FeaturedProject[]>(DEFAULT_FEATURED);
+  const [otherProjs, setOtherProjs] = useState<OtherProject[]>(DEFAULT_OTHER_PROJECTS);
+  const [skills, setSkills]         = useState<Skill[]>(DEFAULT_SKILLS);
+  const [certs, setCerts]           = useState<Cert[]>(DEFAULT_CERTS);
+  const [awards, setAwards]         = useState<Award[]>(DEFAULT_AWARDS);
+  const [stats, setStats]           = useState<Stat[]>(DEFAULT_STATS);
+
+  /* Load content from DB (falls back to defaults above if DB is empty) */
+  useEffect(() => {
+    const keys = ["featured_projects","other_projects","skills","certs","awards","stats"];
+    Promise.all(keys.map(k =>
+      fetch(`/api/admin/settings?key=${k}`).then(r => r.ok ? r.json() : null).catch(() => null)
+    )).then(([fp, op, sk, ce, aw, st]) => {
+      if (fp?.value) try { setFeatured(JSON.parse(fp.value)); } catch { /* keep defaults */ }
+      if (op?.value) try { setOtherProjs(JSON.parse(op.value)); } catch { /* keep defaults */ }
+      if (sk?.value) try { setSkills(JSON.parse(sk.value)); } catch { /* keep defaults */ }
+      if (ce?.value) try { setCerts(JSON.parse(ce.value)); } catch { /* keep defaults */ }
+      if (aw?.value) try { setAwards(JSON.parse(aw.value)); } catch { /* keep defaults */ }
+      if (st?.value) try { setStats(JSON.parse(st.value)); } catch { /* keep defaults */ }
+    });
+  }, []);
+
   useEffect(() => {
     if (canvasRef.current && !codeRainRef.current) codeRainRef.current = initCodeRain(canvasRef.current);
     return () => { codeRainRef.current?.destroy(); };
@@ -800,6 +763,15 @@ export default function EngineerPage() {
           {/* CTAs */}
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
             <ShimmerButton onClick={()=>scroll("work")}>[ VIEW MY WORK ]</ShimmerButton>
+            <a href="/api/cv" target="_blank" rel="noopener noreferrer" style={{
+              ...mono, fontSize:11, letterSpacing:"0.22em", padding:"14px 32px",
+              background:"transparent", border:"1px solid rgba(57,255,20,0.4)",
+              color:"#39ff14", textDecoration:"none", textTransform:"uppercase",
+              display:"inline-block", transition:"border-color 0.25s, background 0.25s, color 0.25s",
+            }}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(57,255,20,0.12)"; e.currentTarget.style.borderColor="#39ff14";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="transparent"; e.currentTarget.style.borderColor="rgba(57,255,20,0.4)";}}
+            >DOWNLOAD CV ↓</a>
             <a href="mailto:eliaghazal777@gmail.com" style={{
               ...mono, fontSize:11, letterSpacing:"0.22em", padding:"14px 32px",
               background:"transparent", border:"1px solid rgba(255,255,255,0.14)",
@@ -821,7 +793,7 @@ export default function EngineerPage() {
       <div ref={statsGrid} style={{ display:"grid",
         gridTemplateColumns:"repeat(4, 1fr)", gap:1,
         background:"#111", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
-        {STATS.map(s => <StatCard key={s.label} {...s} />)}
+        {stats.map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       {/* ── BUILD IN PUBLIC ── */}
@@ -901,7 +873,7 @@ export default function EngineerPage() {
             ...mono, letterSpacing:"0.06em" }}>Each one starts with a real problem.</p>
 
           <div ref={projList} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-            {FEATURED.map(p => (
+            {featured.map(p => (
               <div key={p.id} className="hover-lift" style={{
                 background:"#080808", border:"1px solid rgba(255,255,255,0.05)",
                 borderLeft:`3px solid ${p.accent}`,
@@ -965,7 +937,7 @@ export default function EngineerPage() {
               marginBottom:24, color:"rgba(255,255,255,0.35)" }}>Other Projects</h3>
             <div ref={cardsGrid} style={{ display:"grid",
               gridTemplateColumns:"repeat(auto-fill, minmax(260px,1fr))", gap:2 }}>
-              {CARDS.map(c => (
+              {otherProjs.map(c => (
                 <div key={c.title} className="hover-lift" style={{
                   background:"#080808", border:"1px solid rgba(255,255,255,0.05)",
                   padding:"clamp(18px,2.5vw,26px)",
@@ -1019,7 +991,7 @@ export default function EngineerPage() {
 
             <div ref={skillsGrid} style={{ padding:"clamp(20px,3vw,40px)",
               display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(230px,1fr))", gap:32 }}>
-              {SKILLS.map(s => (
+              {skills.map(s => (
                 <div key={s.cat}>
                   <div style={{ ...mono, fontSize:10, color:"#39ff14", marginBottom:12,
                     letterSpacing:"0.16em" }}>
@@ -1115,7 +1087,7 @@ export default function EngineerPage() {
               <div style={{ ...mono, fontSize:9, letterSpacing:"0.25em",
                 color:"rgba(255,255,255,0.25)", marginBottom:20, textTransform:"uppercase" }}>Certifications</div>
               <div ref={certsList} style={{ display:"flex", flexDirection:"column", gap:1 }}>
-                {CERTS.map(c => (
+                {certs.map(c => (
                   <div key={c.name} className="hover-lift" style={{
                     padding:"16px 20px", background:"#080808",
                     border:"1px solid rgba(255,255,255,0.05)",
@@ -1158,7 +1130,7 @@ export default function EngineerPage() {
               <div style={{ ...mono, fontSize:9, letterSpacing:"0.25em",
                 color:"rgba(255,255,255,0.25)", marginBottom:20, textTransform:"uppercase" }}>Awards & Honors</div>
               <div ref={awardsList} style={{ display:"flex", flexDirection:"column", gap:1, marginBottom:44 }}>
-                {AWARDS.map(a => (
+                {awards.map(a => (
                   <div key={a.title} className="hover-lift" style={{
                     padding:"22px 18px", background:"#080808",
                     border:"1px solid rgba(255,255,255,0.05)",
@@ -1185,7 +1157,7 @@ export default function EngineerPage() {
               {[
                 { t:"AI Workshop — High School Students", d:"Designed + delivered a 2-hour prompt engineering workshop. Students built an AI chatbot/web-app concept." },
                 { t:"Environmental Seminar Speaker",      d:"Delivered a seminar on climate change risk — communicating complex science for a broad audience." },
-                { t:"Whispers of the Eclipse",           d:"Published poetry collection on Amazon UK. Written ages 15–19." },
+                { t:"Whispers of the Eclipse",           d:"Published poetry collection. Written ages 15–19." },
               ].map(e => (
                 <div key={e.t} className="hover-lift" style={{ padding:"13px 14px", background:"#080808",
                   border:"1px solid rgba(255,255,255,0.05)", marginBottom:1,

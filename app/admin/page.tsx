@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  DEFAULT_FEATURED, DEFAULT_OTHER_PROJECTS, DEFAULT_SKILLS,
+  DEFAULT_CERTS, DEFAULT_AWARDS, DEFAULT_STATS, DEFAULT_POEMS, DEFAULT_HERO_LINES,
+  type FeaturedProject, type OtherProject, type Skill, type Cert, type Award, type Stat, type Poem,
+} from "@/lib/defaults";
 
 /* ─── Palette ─── */
 const bg      = "#111110";
@@ -51,6 +56,11 @@ interface LabExperiment {
 
 const TAGS     = ["Essay", "Reflection", "Craft", "Personal", "Poetry", "News"];
 const STATUSES = ["LIVE", "DEMO", "CONCEPT", "COMPLETED"];
+const PROJECT_STATUSES = ["ACTIVE", "LIVE", "COMPLETED", "AWARD"];
+
+function tryParse<T>(value: string, fallback: T): T {
+  try { return JSON.parse(value) as T; } catch { return fallback; }
+}
 
 const uid     = () => Math.random().toString(36).slice(2, 10);
 const nowDate = () => new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" });
@@ -85,7 +95,7 @@ export default function AdminPage() {
   const [passErr, setPassErr]           = useState(false);
   const [authLoading, setAuthLoading]   = useState(false);
   const [password, setPassword]         = useState("");
-  const [tab, setTab]                   = useState<"blog" | "gallery" | "lab">("blog");
+  const [tab, setTab]                   = useState<"blog" | "gallery" | "lab" | "projects" | "skills" | "certs" | "awards" | "poems" | "settings">("blog");
 
   const [posts, setPosts]               = useState<Post[]>([]);
   const [editPost, setEditPost]         = useState<Post | null>(null);
@@ -100,6 +110,50 @@ export default function AdminPage() {
   const [labs, setLabs]                 = useState<LabExperiment[]>([]);
   const [editLab, setEditLab]           = useState<LabExperiment | null>(null);
   const [labForm, setLabForm]           = useState<Omit<LabExperiment, "id">>({ title: "", description: "", category: "", tech: "", github_url: "", demo_type: "", status: "CONCEPT", accent_color: "#39ff14" });
+
+  /* ── New content state ── */
+  const [featuredProjs, setFeaturedProjs] = useState<FeaturedProject[]>([]);
+  const [editFeatured, setEditFeatured]   = useState<FeaturedProject | null>(null);
+  const [featuredForm, setFeaturedForm]   = useState<FeaturedProject>({ id: "", title: "", subtitle: "", status: "ACTIVE", period: "", accent: "#39ff14", problem: "", solution: "", impact: "", tech: [], link: null });
+  const [featuredTechText, setFeaturedTechText] = useState("");
+
+  const [otherProjs, setOtherProjs]     = useState<OtherProject[]>([]);
+  const [editOther, setEditOther]       = useState<OtherProject | null>(null);
+  const [otherForm, setOtherForm]       = useState<OtherProject>({ title: "", desc: "", tech: [], badge: null });
+  const [otherTechText, setOtherTechText] = useState("");
+
+  const [skillsData, setSkillsData]     = useState<Skill[]>([]);
+  const [editSkillIdx, setEditSkillIdx] = useState<number | null>(null);
+  const [skillForm, setSkillForm]       = useState<Skill>({ cat: "", items: [] });
+  const [skillItemsText, setSkillItemsText] = useState("");
+
+  const [certsData, setCertsData]       = useState<Cert[]>([]);
+  const [editCertIdx, setEditCertIdx]   = useState<number | null>(null);
+  const [certForm, setCertForm]         = useState<Cert>({ name: "", issuer: "", date: "", detail: "", accent: "#3b82f6", link: null });
+
+  const [awardsData, setAwardsData]     = useState<Award[]>([]);
+  const [editAwardIdx, setEditAwardIdx] = useState<number | null>(null);
+  const [awardForm, setAwardForm]       = useState<Award>({ icon: "◆", title: "", body: "", detail: "" });
+
+  const [statsData, setStatsData]       = useState<Stat[]>([]);
+  const [editStatIdx, setEditStatIdx]   = useState<number | null>(null);
+  const [statForm, setStatForm]         = useState<Stat>({ label: "", value: 0, suffix: "", prefix: "" });
+
+  const [poemsData, setPoemsData]       = useState<Poem[]>([]);
+  const [editPoemIdx, setEditPoemIdx]   = useState<number | null>(null);
+  const [poemForm, setPoemForm]         = useState<Poem>({ title: "", year: "", theme: "", lines: "" });
+
+  const [heroLinesData, setHeroLinesData] = useState<string[]>([]);
+  const [heroLinesText, setHeroLinesText] = useState("");
+
+  const [cvUrl, setCvUrl]               = useState<string | null>(null);
+  const [cvFile, setCvFile]             = useState<File | null>(null);
+  const [uploadingCv, setUploadingCv]   = useState(false);
+  const [settingEmail, setSettingEmail] = useState("eliaghazal777@gmail.com");
+  const [settingLinkedIn, setSettingLinkedIn] = useState("https://www.linkedin.com/in/eliaghazal/");
+  const [settingGitHub, setSettingGitHub] = useState("https://github.com/eliaghazal/");
+  const [settingBookLink, setSettingBookLink] = useState("https://linktr.ee/eliaghazal");
+  const cvFileRef = useRef<HTMLInputElement>(null);
 
   const [workingOn, setWorkingOn]       = useState("");
   const [workingOnInput, setWorkingOnInput] = useState("");
@@ -145,6 +199,34 @@ export default function AdminPage() {
     } catch { /* */ }
   }, []);
 
+  const loadSiteContent = useCallback(async (auth: string) => {
+    const keys = [
+      "featured_projects","other_projects","skills","certs","awards","stats",
+      "poems","hero_lines","cv_url","social_email","social_linkedin","social_github","book_link",
+    ];
+    try {
+      const results = await Promise.all(
+        keys.map(k => apiFetch(`/api/admin/settings?key=${k}`, { auth }).then(r => r.ok ? r.json() : null).catch(() => null))
+      );
+      const [fp, op, sk, ce, aw, st, po, hl, cv, em, li, gh, bl] = results;
+      setFeaturedProjs(fp?.value ? tryParse(fp.value, DEFAULT_FEATURED) : DEFAULT_FEATURED);
+      setOtherProjs(op?.value ? tryParse(op.value, DEFAULT_OTHER_PROJECTS) : DEFAULT_OTHER_PROJECTS);
+      setSkillsData(sk?.value ? tryParse(sk.value, DEFAULT_SKILLS) : DEFAULT_SKILLS);
+      setCertsData(ce?.value ? tryParse(ce.value, DEFAULT_CERTS) : DEFAULT_CERTS);
+      setAwardsData(aw?.value ? tryParse(aw.value, DEFAULT_AWARDS) : DEFAULT_AWARDS);
+      setStatsData(st?.value ? tryParse(st.value, DEFAULT_STATS) : DEFAULT_STATS);
+      setPoemsData(po?.value ? tryParse(po.value, DEFAULT_POEMS) : DEFAULT_POEMS);
+      const hlArr: string[] = hl?.value ? tryParse(hl.value, DEFAULT_HERO_LINES) : DEFAULT_HERO_LINES;
+      setHeroLinesData(hlArr);
+      setHeroLinesText(hlArr.join("\n---\n"));
+      if (cv?.value) setCvUrl(cv.value);
+      if (em?.value) setSettingEmail(em.value);
+      if (li?.value) setSettingLinkedIn(li.value);
+      if (gh?.value) setSettingGitHub(gh.value);
+      if (bl?.value) setSettingBookLink(bl.value);
+    } catch { /* */ }
+  }, []);
+
   const handleLogin = async () => {
     if (!passInput.trim()) return;
     setAuthLoading(true);
@@ -163,6 +245,7 @@ export default function AdminPage() {
           loadGallery(passInput),
           loadLabs(passInput),
           loadSettings(passInput),
+          loadSiteContent(passInput),
         ]);
       } else {
         setPassErr(true);
@@ -348,6 +431,168 @@ export default function AdminPage() {
     } catch { showToast("Network error", false); }
   };
 
+  /* ── Content helpers ── */
+  const saveContentSetting = async (key: string, value: unknown): Promise<boolean> => {
+    try {
+      const res = await apiFetch("/api/admin/settings", { method: "PUT", auth: password, body: JSON.stringify({ key, value: JSON.stringify(value) }) });
+      return res.ok;
+    } catch { return false; }
+  };
+
+  /* ── Featured Projects handlers ── */
+  const resetFeaturedForm = () => { setEditFeatured(null); setFeaturedForm({ id: "", title: "", subtitle: "", status: "ACTIVE", period: "", accent: "#39ff14", problem: "", solution: "", impact: "", tech: [], link: null }); setFeaturedTechText(""); };
+  const saveFeaturedProject = async () => {
+    if (!featuredForm.title.trim()) { showToast("Title required", false); return; }
+    setLoading(true);
+    const techArr = featuredTechText.split(",").map(s => s.trim()).filter(Boolean);
+    const item: FeaturedProject = { ...featuredForm, id: editFeatured ? editFeatured.id : uid(), tech: techArr };
+    const newList = editFeatured ? featuredProjs.map(p => p.id === editFeatured.id ? item : p) : [...featuredProjs, item];
+    if (await saveContentSetting("featured_projects", newList)) { setFeaturedProjs(newList); showToast(editFeatured ? "Updated" : "Added"); resetFeaturedForm(); }
+    else showToast("Failed to save", false);
+    setLoading(false);
+  };
+  const deleteFeaturedProject = async (id: string) => {
+    const newList = featuredProjs.filter(p => p.id !== id);
+    if (await saveContentSetting("featured_projects", newList)) { setFeaturedProjs(newList); showToast("Deleted"); }
+    else showToast("Failed", false);
+  };
+
+  /* ── Other Projects handlers ── */
+  const resetOtherForm = () => { setEditOther(null); setOtherForm({ title: "", desc: "", tech: [], badge: null }); setOtherTechText(""); };
+  const saveOtherProject = async () => {
+    if (!otherForm.title.trim()) { showToast("Title required", false); return; }
+    setLoading(true);
+    const techArr = otherTechText.split(",").map(s => s.trim()).filter(Boolean);
+    const item: OtherProject = { ...otherForm, tech: techArr };
+    const newList = editOther ? otherProjs.map(p => p.title === editOther.title ? item : p) : [...otherProjs, item];
+    if (await saveContentSetting("other_projects", newList)) { setOtherProjs(newList); showToast(editOther ? "Updated" : "Added"); resetOtherForm(); }
+    else showToast("Failed to save", false);
+    setLoading(false);
+  };
+  const deleteOtherProject = async (title: string) => {
+    const newList = otherProjs.filter(p => p.title !== title);
+    if (await saveContentSetting("other_projects", newList)) { setOtherProjs(newList); showToast("Deleted"); }
+    else showToast("Failed", false);
+  };
+
+  /* ── Skills handlers ── */
+  const resetSkillForm = () => { setEditSkillIdx(null); setSkillForm({ cat: "", items: [] }); setSkillItemsText(""); };
+  const saveSkill = async () => {
+    if (!skillForm.cat.trim()) { showToast("Category required", false); return; }
+    setLoading(true);
+    const items = skillItemsText.split(",").map(s => s.trim()).filter(Boolean);
+    const item: Skill = { cat: skillForm.cat, items };
+    const newList = editSkillIdx !== null ? skillsData.map((s, i) => i === editSkillIdx ? item : s) : [...skillsData, item];
+    if (await saveContentSetting("skills", newList)) { setSkillsData(newList); showToast(editSkillIdx !== null ? "Updated" : "Added"); resetSkillForm(); }
+    else showToast("Failed", false);
+    setLoading(false);
+  };
+  const deleteSkill = async (idx: number) => {
+    const newList = skillsData.filter((_, i) => i !== idx);
+    if (await saveContentSetting("skills", newList)) { setSkillsData(newList); showToast("Deleted"); }
+    else showToast("Failed", false);
+  };
+
+  /* ── Certs handlers ── */
+  const resetCertForm = () => { setEditCertIdx(null); setCertForm({ name: "", issuer: "", date: "", detail: "", accent: "#3b82f6", link: null }); };
+  const saveCert = async () => {
+    if (!certForm.name.trim()) { showToast("Name required", false); return; }
+    setLoading(true);
+    const item: Cert = { ...certForm, link: certForm.link || null };
+    const newList = editCertIdx !== null ? certsData.map((c, i) => i === editCertIdx ? item : c) : [...certsData, item];
+    if (await saveContentSetting("certs", newList)) { setCertsData(newList); showToast(editCertIdx !== null ? "Updated" : "Added"); resetCertForm(); }
+    else showToast("Failed", false);
+    setLoading(false);
+  };
+  const deleteCert = async (idx: number) => {
+    const newList = certsData.filter((_, i) => i !== idx);
+    if (await saveContentSetting("certs", newList)) { setCertsData(newList); showToast("Deleted"); }
+    else showToast("Failed", false);
+  };
+
+  /* ── Awards handlers ── */
+  const resetAwardForm = () => { setEditAwardIdx(null); setAwardForm({ icon: "◆", title: "", body: "", detail: "" }); };
+  const saveAward = async () => {
+    if (!awardForm.title.trim()) { showToast("Title required", false); return; }
+    setLoading(true);
+    const newList = editAwardIdx !== null ? awardsData.map((a, i) => i === editAwardIdx ? awardForm : a) : [...awardsData, awardForm];
+    if (await saveContentSetting("awards", newList)) { setAwardsData(newList); showToast(editAwardIdx !== null ? "Updated" : "Added"); resetAwardForm(); }
+    else showToast("Failed", false);
+    setLoading(false);
+  };
+  const deleteAward = async (idx: number) => {
+    const newList = awardsData.filter((_, i) => i !== idx);
+    if (await saveContentSetting("awards", newList)) { setAwardsData(newList); showToast("Deleted"); }
+    else showToast("Failed", false);
+  };
+
+  /* ── Stats handlers ── */
+  const resetStatForm = () => { setEditStatIdx(null); setStatForm({ label: "", value: 0, suffix: "", prefix: "" }); };
+  const saveStat = async () => {
+    if (!statForm.label.trim()) { showToast("Label required", false); return; }
+    setLoading(true);
+    const newList = editStatIdx !== null ? statsData.map((s, i) => i === editStatIdx ? statForm : s) : [...statsData, statForm];
+    if (await saveContentSetting("stats", newList)) { setStatsData(newList); showToast(editStatIdx !== null ? "Updated" : "Added"); resetStatForm(); }
+    else showToast("Failed", false);
+    setLoading(false);
+  };
+  const deleteStat = async (idx: number) => {
+    const newList = statsData.filter((_, i) => i !== idx);
+    if (await saveContentSetting("stats", newList)) { setStatsData(newList); showToast("Deleted"); }
+    else showToast("Failed", false);
+  };
+
+  /* ── Poems handlers ── */
+  const resetPoemForm = () => { setEditPoemIdx(null); setPoemForm({ title: "", year: "", theme: "", lines: "" }); };
+  const savePoem = async () => {
+    if (!poemForm.title.trim()) { showToast("Title required", false); return; }
+    setLoading(true);
+    const newList = editPoemIdx !== null ? poemsData.map((p, i) => i === editPoemIdx ? poemForm : p) : [...poemsData, poemForm];
+    if (await saveContentSetting("poems", newList)) { setPoemsData(newList); showToast(editPoemIdx !== null ? "Updated" : "Added"); resetPoemForm(); }
+    else showToast("Failed", false);
+    setLoading(false);
+  };
+  const deletePoem = async (idx: number) => {
+    const newList = poemsData.filter((_, i) => i !== idx);
+    if (await saveContentSetting("poems", newList)) { setPoemsData(newList); showToast("Deleted"); }
+    else showToast("Failed", false);
+  };
+  const saveHeroLines = async () => {
+    const lines = heroLinesText.split("\n---\n").map(s => s.trim()).filter(Boolean);
+    if (await saveContentSetting("hero_lines", lines)) { setHeroLinesData(lines); showToast("Hero lines saved"); }
+    else showToast("Failed", false);
+  };
+
+  /* ── Settings handlers ── */
+  const handleCvUpload = async () => {
+    if (!cvFile) { showToast("Select a PDF first", false); return; }
+    setUploadingCv(true);
+    try {
+      const form = new FormData();
+      form.append("file", cvFile);
+      const res = await fetch("/api/cv", { method: "POST", headers: { "Authorization": password }, body: form });
+      if (res.ok) {
+        const { url } = await res.json();
+        setCvUrl(url); setCvFile(null);
+        if (cvFileRef.current) cvFileRef.current.value = "";
+        showToast("CV uploaded");
+      } else showToast("Upload failed", false);
+    } catch { showToast("Network error", false); }
+    finally { setUploadingCv(false); }
+  };
+  const saveSocialLinks = async () => {
+    await Promise.all([
+      saveContentSetting("social_email", settingEmail),
+      saveContentSetting("social_linkedin", settingLinkedIn),
+      saveContentSetting("social_github", settingGitHub),
+    ]);
+    showToast("Social links saved");
+  };
+  const saveBookLink = async () => {
+    if (await saveContentSetting("book_link", settingBookLink)) showToast("Book link saved");
+    else showToast("Failed", false);
+  };
+
   const F  = postForm;
   const SF = setPostForm;
   const LF = labForm;
@@ -362,13 +607,13 @@ export default function AdminPage() {
         </div>
       )}
 
-      <header style={{ padding: "0 clamp(24px,5vw,60px)", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${border}`, background: surface, flexWrap: "wrap", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <header style={{ padding: "0 clamp(24px,5vw,60px)", minHeight: 56, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${border}`, background: surface, flexWrap: "wrap", gap: 8, paddingTop: 8, paddingBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.3em", color: rustDim }}>ELIA · ADMIN</span>
           <span style={{ width: 1, height: 16, background: border }} />
-          <div style={{ display: "flex", gap: 1 }}>
-            {(["blog", "gallery", "lab"] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{ padding: "6px 16px", background: tab === t ? rust : "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.18em", color: tab === t ? "#fff" : dim, textTransform: "uppercase", transition: "all 0.2s" }}>{t}</button>
+          <div style={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            {(["blog", "gallery", "lab", "projects", "skills", "certs", "awards", "poems", "settings"] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)} style={{ padding: "6px 14px", background: tab === t ? rust : "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.18em", color: tab === t ? "#fff" : dim, textTransform: "uppercase", transition: "all 0.2s" }}>{t}</button>
             ))}
           </div>
         </div>
@@ -551,6 +796,337 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* ── PROJECTS ── */}
+        {tab === "projects" && (
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 24 }}>// FEATURED PROJECTS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 2, alignItems: "start", marginBottom: 48 }}>
+              <div>
+                {featuredProjs.length === 0 && <div style={{ padding: "24px", border: `1px dashed ${border}`, color: faint, fontFamily: "var(--font-mono)", fontSize: 11, textAlign: "center" }}>No featured projects. Add one →</div>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {featuredProjs.map(p => (
+                    <div key={p.id} style={{ padding: "14px 16px", background: card, border: `1px solid ${border}`, borderLeft: `3px solid ${p.accent}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                      <div>
+                        <div style={{ display: "flex", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, padding: "1px 7px", background: "rgba(196,103,62,0.15)", color: rust, border: "1px solid rgba(196,103,62,0.2)" }}>{p.status}</span>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: faint }}>{p.period}</span>
+                        </div>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: text, marginBottom: 2 }}>{p.title}</div>
+                        <div style={{ fontSize: 12, color: dim }}>{p.subtitle}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => { setEditFeatured(p); setFeaturedForm(p); setFeaturedTechText(p.tech.join(", ")); }} style={{ ...btnStyle("#333"), fontSize: 8, padding: "6px 10px" }}>Edit</button>
+                        <button onClick={() => deleteFeaturedProject(p.id)} style={{ ...btnStyle(red), fontSize: 8, padding: "6px 10px" }}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>{editFeatured ? "✎ EDITING" : "+ NEW FEATURED"}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div><label style={labelStyle}>Title *</label><input value={featuredForm.title} onChange={e => setFeaturedForm(f => ({ ...f, title: e.target.value }))} placeholder="Project title" style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Subtitle</label><input value={featuredForm.subtitle} onChange={e => setFeaturedForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Short tagline" style={inputStyle} /></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><label style={labelStyle}>Status</label><select value={featuredForm.status} onChange={e => setFeaturedForm(f => ({ ...f, status: e.target.value }))} style={{ ...inputStyle, appearance: "none" }}>{PROJECT_STATUSES.map(s => <option key={s}>{s}</option>)}</select></div>
+                    <div><label style={labelStyle}>Period</label><input value={featuredForm.period} onChange={e => setFeaturedForm(f => ({ ...f, period: e.target.value }))} placeholder="2024" style={inputStyle} /></div>
+                  </div>
+                  <div><label style={labelStyle}>Accent color</label><input type="color" value={featuredForm.accent} onChange={e => setFeaturedForm(f => ({ ...f, accent: e.target.value }))} style={{ ...inputStyle, padding: "4px", height: 42, cursor: "pointer" }} /></div>
+                  <div><label style={labelStyle}>Problem</label><textarea value={featuredForm.problem} onChange={e => setFeaturedForm(f => ({ ...f, problem: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "vertical" }} /></div>
+                  <div><label style={labelStyle}>Solution</label><textarea value={featuredForm.solution} onChange={e => setFeaturedForm(f => ({ ...f, solution: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "vertical" }} /></div>
+                  <div><label style={labelStyle}>Impact</label><textarea value={featuredForm.impact} onChange={e => setFeaturedForm(f => ({ ...f, impact: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "vertical" }} /></div>
+                  <div><label style={labelStyle}>Tech (comma-separated)</label><input value={featuredTechText} onChange={e => setFeaturedTechText(e.target.value)} placeholder="React, Node.js, Python" style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Link</label><input value={featuredForm.link ?? ""} onChange={e => setFeaturedForm(f => ({ ...f, link: e.target.value || null }))} placeholder="https://…" style={inputStyle} /></div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={saveFeaturedProject} disabled={loading} style={{ ...btnStyle(), flex: 1, opacity: loading ? 0.6 : 1 }}>{editFeatured ? "Save" : "Add"}</button>
+                    {editFeatured && <button onClick={resetFeaturedForm} style={{ ...btnStyle("#333"), padding: "10px 14px" }}>Cancel</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 24 }}>// OTHER PROJECTS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 2, alignItems: "start" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {otherProjs.map(p => (
+                  <div key={p.title} style={{ padding: "12px 16px", background: card, border: `1px solid ${border}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                    <div>
+                      {p.badge && <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#fbbf24", marginBottom: 3 }}>{p.badge}</div>}
+                      <div style={{ fontWeight: 600, fontSize: 14, color: text, marginBottom: 2 }}>{p.title}</div>
+                      <div style={{ fontSize: 12, color: dim }}>{p.desc.slice(0, 80)}{p.desc.length > 80 ? "…" : ""}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setEditOther(p); setOtherForm(p); setOtherTechText(p.tech.join(", ")); }} style={{ ...btnStyle("#333"), fontSize: 8, padding: "6px 10px" }}>Edit</button>
+                      <button onClick={() => deleteOtherProject(p.title)} style={{ ...btnStyle(red), fontSize: 8, padding: "6px 10px" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>{editOther ? "✎ EDITING" : "+ NEW PROJECT"}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div><label style={labelStyle}>Title *</label><input value={otherForm.title} onChange={e => setOtherForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Description</label><textarea value={otherForm.desc} onChange={e => setOtherForm(f => ({ ...f, desc: e.target.value }))} rows={3} style={{ ...inputStyle, resize: "vertical" }} /></div>
+                  <div><label style={labelStyle}>Tech (comma-separated)</label><input value={otherTechText} onChange={e => setOtherTechText(e.target.value)} placeholder="React, Python" style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Badge (optional)</label><input value={otherForm.badge ?? ""} onChange={e => setOtherForm(f => ({ ...f, badge: e.target.value || null }))} placeholder="🥈 2nd Place…" style={inputStyle} /></div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={saveOtherProject} disabled={loading} style={{ ...btnStyle(), flex: 1, opacity: loading ? 0.6 : 1 }}>{editOther ? "Save" : "Add"}</button>
+                    {editOther && <button onClick={resetOtherForm} style={{ ...btnStyle("#333"), padding: "10px 14px" }}>Cancel</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SKILLS ── */}
+        {tab === "skills" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 2, alignItems: "start" }}>
+            <div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: dim, marginBottom: 16 }}>{skillsData.length} CATEGORIES</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {skillsData.map((s, i) => (
+                  <div key={i} style={{ padding: "14px 16px", background: card, border: `1px solid ${border}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "start" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: text, marginBottom: 6 }}>{s.cat}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {s.items.map((item, j) => <span key={j} style={{ fontFamily: "var(--font-mono)", fontSize: 9, padding: "2px 8px", background: "rgba(57,255,20,0.06)", color: "rgba(57,255,20,0.7)", border: "1px solid rgba(57,255,20,0.15)" }}>{item}</span>)}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setEditSkillIdx(i); setSkillForm(s); setSkillItemsText(s.items.join(", ")); }} style={{ ...btnStyle("#333"), fontSize: 8, padding: "6px 10px" }}>Edit</button>
+                      <button onClick={() => deleteSkill(i)} style={{ ...btnStyle(red), fontSize: 8, padding: "6px 10px" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>{editSkillIdx !== null ? "✎ EDITING" : "+ NEW CATEGORY"}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div><label style={labelStyle}>Category name *</label><input value={skillForm.cat} onChange={e => setSkillForm(f => ({ ...f, cat: e.target.value }))} placeholder="e.g. Languages" style={inputStyle} /></div>
+                <div><label style={labelStyle}>Items (comma-separated)</label><textarea value={skillItemsText} onChange={e => setSkillItemsText(e.target.value)} rows={4} placeholder="Python, TypeScript, Java…" style={{ ...inputStyle, resize: "vertical" }} /></div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={saveSkill} disabled={loading} style={{ ...btnStyle(), flex: 1, opacity: loading ? 0.6 : 1 }}>{editSkillIdx !== null ? "Save" : "Add Category"}</button>
+                  {editSkillIdx !== null && <button onClick={resetSkillForm} style={{ ...btnStyle("#333"), padding: "10px 14px" }}>Cancel</button>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── CERTS ── */}
+        {tab === "certs" && (
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 24 }}>// CERTIFICATIONS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 2, alignItems: "start", marginBottom: 48 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {certsData.map((c, i) => (
+                  <div key={i} style={{ padding: "12px 16px", background: card, border: `1px solid ${border}`, borderLeft: `2px solid ${c.accent}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: text, marginBottom: 2 }}>{c.name}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: dim }}>{c.issuer} · {c.detail} · {c.date}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setEditCertIdx(i); setCertForm(c); }} style={{ ...btnStyle("#333"), fontSize: 8, padding: "6px 10px" }}>Edit</button>
+                      <button onClick={() => deleteCert(i)} style={{ ...btnStyle(red), fontSize: 8, padding: "6px 10px" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>{editCertIdx !== null ? "✎ EDITING" : "+ NEW CERT"}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div><label style={labelStyle}>Name *</label><input value={certForm.name} onChange={e => setCertForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Issuer</label><input value={certForm.issuer} onChange={e => setCertForm(f => ({ ...f, issuer: e.target.value }))} style={inputStyle} /></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><label style={labelStyle}>Date</label><input value={certForm.date} onChange={e => setCertForm(f => ({ ...f, date: e.target.value }))} placeholder="Jan 2025" style={inputStyle} /></div>
+                    <div><label style={labelStyle}>Accent</label><input type="color" value={certForm.accent} onChange={e => setCertForm(f => ({ ...f, accent: e.target.value }))} style={{ ...inputStyle, padding: "4px", height: 42, cursor: "pointer" }} /></div>
+                  </div>
+                  <div><label style={labelStyle}>Detail</label><input value={certForm.detail} onChange={e => setCertForm(f => ({ ...f, detail: e.target.value }))} placeholder="Score: 99/120" style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Link (optional)</label><input value={certForm.link ?? ""} onChange={e => setCertForm(f => ({ ...f, link: e.target.value || null }))} placeholder="https://credly.com/…" style={inputStyle} /></div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={saveCert} disabled={loading} style={{ ...btnStyle(), flex: 1, opacity: loading ? 0.6 : 1 }}>{editCertIdx !== null ? "Save" : "Add"}</button>
+                    {editCertIdx !== null && <button onClick={resetCertForm} style={{ ...btnStyle("#333"), padding: "10px 14px" }}>Cancel</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 24 }}>// AWARDS & HONORS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 2, alignItems: "start", marginBottom: 48 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {awardsData.map((a, i) => (
+                  <div key={i} style={{ padding: "12px 16px", background: card, border: `1px solid ${border}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ fontSize: 20 }}>{a.icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: text }}>{a.title}</div>
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: dim }}>{a.body} · {a.detail}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setEditAwardIdx(i); setAwardForm(a); }} style={{ ...btnStyle("#333"), fontSize: 8, padding: "6px 10px" }}>Edit</button>
+                      <button onClick={() => deleteAward(i)} style={{ ...btnStyle(red), fontSize: 8, padding: "6px 10px" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>{editAwardIdx !== null ? "✎ EDITING" : "+ NEW AWARD"}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div><label style={labelStyle}>Icon</label><input value={awardForm.icon} onChange={e => setAwardForm(f => ({ ...f, icon: e.target.value }))} placeholder="🥇 or ◆" style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Title *</label><input value={awardForm.title} onChange={e => setAwardForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Body</label><input value={awardForm.body} onChange={e => setAwardForm(f => ({ ...f, body: e.target.value }))} placeholder="AUST" style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Detail</label><input value={awardForm.detail} onChange={e => setAwardForm(f => ({ ...f, detail: e.target.value }))} placeholder="Spring 2024 – 2025" style={inputStyle} /></div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={saveAward} disabled={loading} style={{ ...btnStyle(), flex: 1, opacity: loading ? 0.6 : 1 }}>{editAwardIdx !== null ? "Save" : "Add"}</button>
+                    {editAwardIdx !== null && <button onClick={resetAwardForm} style={{ ...btnStyle("#333"), padding: "10px 14px" }}>Cancel</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 24 }}>// STATS BAR</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 2, alignItems: "start" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {statsData.map((s, i) => (
+                  <div key={i} style={{ padding: "12px 16px", background: card, border: `1px solid ${border}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: text }}>{s.prefix}{s.value}{s.suffix} — <span style={{ color: dim }}>{s.label}</span></div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setEditStatIdx(i); setStatForm(s); }} style={{ ...btnStyle("#333"), fontSize: 8, padding: "6px 10px" }}>Edit</button>
+                      <button onClick={() => deleteStat(i)} style={{ ...btnStyle(red), fontSize: 8, padding: "6px 10px" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>{editStatIdx !== null ? "✎ EDITING" : "+ NEW STAT"}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div><label style={labelStyle}>Label *</label><input value={statForm.label} onChange={e => setStatForm(f => ({ ...f, label: e.target.value }))} placeholder="Certifications" style={inputStyle} /></div>
+                  <div><label style={labelStyle}>Value</label><input type="number" value={statForm.value} onChange={e => setStatForm(f => ({ ...f, value: Number(e.target.value) }))} style={inputStyle} /></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><label style={labelStyle}>Prefix</label><input value={statForm.prefix} onChange={e => setStatForm(f => ({ ...f, prefix: e.target.value }))} placeholder="#" style={inputStyle} /></div>
+                    <div><label style={labelStyle}>Suffix</label><input value={statForm.suffix} onChange={e => setStatForm(f => ({ ...f, suffix: e.target.value }))} placeholder="+" style={inputStyle} /></div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={saveStat} disabled={loading} style={{ ...btnStyle(), flex: 1, opacity: loading ? 0.6 : 1 }}>{editStatIdx !== null ? "Save" : "Add"}</button>
+                    {editStatIdx !== null && <button onClick={resetStatForm} style={{ ...btnStyle("#333"), padding: "10px 14px" }}>Cancel</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── AWARDS ── */}
+        {tab === "awards" && (
+          <div style={{ color: dim, fontFamily: "var(--font-mono)", fontSize: 12, padding: "24px 0" }}>
+            Awards &amp; Stats are managed under the <button onClick={() => setTab("certs")} style={{ background: "none", border: "none", color: rust, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 12, textDecoration: "underline" }}>Certs</button> tab.
+          </div>
+        )}
+
+        {/* ── POEMS ── */}
+        {tab === "poems" && (
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 24 }}>// POEMS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 2, alignItems: "start", marginBottom: 48 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {poemsData.map((p, i) => (
+                  <div key={i} style={{ padding: "12px 16px", background: card, border: `1px solid ${border}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: text, marginBottom: 2 }}>{p.title}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: dim }}>{p.year} · {p.theme}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setEditPoemIdx(i); setPoemForm(p); }} style={{ ...btnStyle("#333"), fontSize: 8, padding: "6px 10px" }}>Edit</button>
+                      <button onClick={() => deletePoem(i)} style={{ ...btnStyle(red), fontSize: 8, padding: "6px 10px" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>{editPoemIdx !== null ? "✎ EDITING" : "+ NEW POEM"}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div><label style={labelStyle}>Title *</label><input value={poemForm.title} onChange={e => setPoemForm(f => ({ ...f, title: e.target.value }))} style={inputStyle} /></div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div><label style={labelStyle}>Year</label><input value={poemForm.year} onChange={e => setPoemForm(f => ({ ...f, year: e.target.value }))} placeholder="2022" style={inputStyle} /></div>
+                    <div><label style={labelStyle}>Theme</label><input value={poemForm.theme} onChange={e => setPoemForm(f => ({ ...f, theme: e.target.value }))} placeholder="Identity" style={inputStyle} /></div>
+                  </div>
+                  <div><label style={labelStyle}>Lines (full text)</label><textarea value={poemForm.lines} onChange={e => setPoemForm(f => ({ ...f, lines: e.target.value }))} rows={10} placeholder="Poem text…" style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.7 }} /></div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={savePoem} disabled={loading} style={{ ...btnStyle(), flex: 1, opacity: loading ? 0.6 : 1 }}>{editPoemIdx !== null ? "Save" : "Add Poem"}</button>
+                    {editPoemIdx !== null && <button onClick={resetPoemForm} style={{ ...btnStyle("#333"), padding: "10px 14px" }}>Cancel</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>// HERO CYCLING LINES</div>
+            <div style={{ fontSize: 12, color: dim, marginBottom: 16 }}>Enter each hero line separated by <code style={{ background: surface, padding: "1px 6px" }}>---</code> on its own line. Newlines within a line are preserved.</div>
+            <textarea
+              value={heroLinesText}
+              onChange={e => setHeroLinesText(e.target.value)}
+              rows={12}
+              style={{ ...inputStyle, width: "100%", resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.7, marginBottom: 12 }}
+              placeholder={"Come all,\nwe're witnessing\nthe eclipse.\n---\nThe sun tries\nher best\nbut never listens."}
+            />
+            <button onClick={saveHeroLines} disabled={loading} style={{ ...btnStyle(), opacity: loading ? 0.6 : 1 }}>Save Hero Lines</button>
+          </div>
+        )}
+
+        {/* ── SETTINGS ── */}
+        {tab === "settings" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+
+            {/* CV Upload */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>// CV / RESUME</div>
+              {cvUrl && (
+                <div style={{ marginBottom: 16, padding: "10px 12px", background: surface, border: `1px solid ${border}` }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: dim, marginBottom: 4 }}>CURRENT CV URL</div>
+                  <a href={cvUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: green, wordBreak: "break-all" }}>{cvUrl}</a>
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div><label style={labelStyle}>Upload new CV (PDF)</label><input ref={cvFileRef} type="file" accept=".pdf" onChange={e => setCvFile(e.target.files?.[0] ?? null)} style={{ ...inputStyle, padding: "8px 12px", cursor: "pointer" }} /></div>
+                <button onClick={handleCvUpload} disabled={uploadingCv || !cvFile} style={{ ...btnStyle(green), opacity: (uploadingCv || !cvFile) ? 0.5 : 1 }}>{uploadingCv ? "Uploading…" : "Upload CV"}</button>
+              </div>
+            </div>
+
+            {/* Social Links */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>// SOCIAL LINKS</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div><label style={labelStyle}>Email</label><input value={settingEmail} onChange={e => setSettingEmail(e.target.value)} style={inputStyle} /></div>
+                <div><label style={labelStyle}>LinkedIn URL</label><input value={settingLinkedIn} onChange={e => setSettingLinkedIn(e.target.value)} style={inputStyle} /></div>
+                <div><label style={labelStyle}>GitHub URL</label><input value={settingGitHub} onChange={e => setSettingGitHub(e.target.value)} style={inputStyle} /></div>
+                <button onClick={saveSocialLinks} style={btnStyle()}>Save Social Links</button>
+              </div>
+            </div>
+
+            {/* Book Link */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>// BOOK LINK</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div><label style={labelStyle}>Book purchase link</label><input value={settingBookLink} onChange={e => setSettingBookLink(e.target.value)} style={inputStyle} /></div>
+                <button onClick={saveBookLink} style={btnStyle()}>Save Book Link</button>
+              </div>
+            </div>
+
+            {/* Currently Working On */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>// CURRENTLY WORKING ON</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div><label style={labelStyle}>Status text</label><input value={workingOnInput} onChange={e => setWorkingOnInput(e.target.value)} placeholder="CrashLens v2" style={inputStyle} /></div>
+                <button onClick={saveWorkingOn} style={btnStyle()}>Save</button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
       </div>
     </div>
   );
