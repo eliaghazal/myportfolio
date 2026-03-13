@@ -220,10 +220,16 @@ export default function GalleryPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("elia_gallery");
-      if (stored) setItems([...SEED_GALLERY, ...(JSON.parse(stored) as GalleryItem[])]);
-    } catch { /* */ }
+    fetch("/api/gallery")
+      .then(r => r.ok ? r.json() : [])
+      .then((data: Array<GalleryItem & { image_url?: string }>) => {
+        const mapped = data.map(item => ({
+          ...item,
+          imageUrl: item.image_url ?? item.imageUrl,
+        }));
+        setItems([...SEED_GALLERY, ...mapped]);
+      })
+      .catch(() => { /* silently fall back to seed gallery */ });
   }, []);
 
   const headRef = useFade(0);

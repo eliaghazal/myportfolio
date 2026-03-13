@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -308,6 +308,370 @@ function StatCard({ label, value, suffix, prefix }: { label:string; value:number
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   INTERACTIVE CLI TERMINAL
+═══════════════════════════════════════════════════════════════ */
+const TERMINAL_PROJECTS = [
+  { name: "CrashLens",              status: "ACTIVE",    tech: "IoT + AI + Real-Time" },
+  { name: "MysteryPersona Deck",    status: "LIVE",      tech: "E-Commerce + Branding" },
+  { name: "Fake News Detector",     status: "COMPLETED", tech: "NLP + DistilBERT" },
+  { name: "Student Mgmt System",    status: "AWARD 🥇",  tech: "Java + Spring Boot" },
+  { name: "Automata Visualizer",    status: "BUILT",     tech: "JS + Algorithm Design" },
+  { name: "Library Mgmt System",    status: "AWARD 🥈",  tech: "Java + SQL" },
+];
+
+const TERMINAL_COMMANDS: Record<string, () => string[]> = {
+  help: () => [
+    "  Available commands:",
+    "  ─────────────────────────────────────────",
+    "  help              List all commands",
+    "  about             About Elia",
+    "  projects          Featured projects",
+    "  skills            Tech stack",
+    "  contact           Contact links",
+    "  certs             Certifications",
+    "  whoami            Current user",
+    "  pwd               Current directory",
+    "  ls                List files",
+    "  cat about.txt     Read about file",
+    "  resume            Resume summary",
+    "  clear             Clear terminal",
+    "  sudo hire elia    Try it ;)",
+    "  echo [text]       Echo back",
+  ],
+  about: () => [
+    "  Name:       Elia Alghazal",
+    "  Location:   Lebanon → the world",
+    "  Role:       Engineer / Poet / Builder",
+    "  School:     AUST Computer Science (2026)",
+    "  Standing:   Honor's List",
+    "  Motto:      The impossible, made.",
+  ],
+  projects: () => [
+    "  ┌────────────────────────────────────────────────────┐",
+    "  │ PROJECT                 STATUS      TECH           │",
+    "  ├────────────────────────────────────────────────────┤",
+    ...TERMINAL_PROJECTS.map(p =>
+      `  │ ${p.name.padEnd(24)} ${p.status.padEnd(11)} ${p.tech.slice(0,14).padEnd(14)} │`
+    ),
+    "  └────────────────────────────────────────────────────┘",
+  ],
+  skills: () => [
+    "  Languages:    Python, TypeScript, Java, Kotlin, C++, Swift",
+    "  AI / ML:      PyTorch, DistilBERT, scikit-learn, NumPy",
+    "  Backend:      Spring Boot, Node.js, REST API, Microservices",
+    "  Frontend:     React, Next.js, GSAP, Canvas API",
+    "  Mobile:       Flutter, Kotlin Android, Swift iOS",
+    "  IoT:          Raspberry Pi, 4G Module, IMU / GPS, Edge AI",
+    "  DevOps:       Git, Docker, GitLab, Linux",
+    "  Databases:    SQL, MongoDB, PostgreSQL",
+  ],
+  contact: () => [
+    "  Email:    eliaghazal777@gmail.com",
+    "  LinkedIn: linkedin.com/in/eliaghazal",
+    "  GitHub:   github.com/eliaghazal",
+  ],
+  certs: () => [
+    "  TOEFL iBT                   ETS                  99/120  (Sep 2025)",
+    "  CCNA: Switching & Routing   Cisco                        (Jan 2025)",
+    "  Introduction to Networks    Cisco                        (Dec 2024)",
+    "  IT Essentials               Cisco                        (Feb 2024)",
+    "  IT Specialist — Python      Certiport / Pearson VUE      (Jan 2024)",
+    "  ECPE — C2 Proficiency       University of Michigan        (Dec 2023)",
+    "  DELF B2                     République française          (Oct 2022)",
+  ],
+  resume: () => [
+    "  Elia Alghazal — Computer Science @ AUST (2026)",
+    "  ─────────────────────────────────────────────",
+    "  ✦  9+ projects built and deployed",
+    "  ✦  7 certifications earned",
+    "  ✦  1st Place — AUST Coding Expo (Student Mgmt System)",
+    "  ✦  Published author: Whispers of the Eclipse (Amazon UK)",
+    "  ✦  Founder: TwoFoundersLab (Crypto, DFA Minimizer, ...)",
+    "  ✦  Fluent: Arabic, English (C2), French (B2), Italian",
+    "",
+    "  [Download PDF] → linkedin.com/in/eliaghazal",
+  ],
+  whoami: () => ["  elia_alghazal"],
+  pwd:    () => ["  /home/elia/portfolio"],
+  ls:     () => ["  projects/  skills/  about.txt  contact.md  resume.pdf  lab/"],
+  "cat about.txt": () => TERMINAL_COMMANDS.about(),
+  "sudo hire elia": () => [
+    "  [sudo] password for universe: ********",
+    "  Checking qualifications...",
+    "  ✓ Builds IoT ecosystems at 3am",
+    "  ✓ Writes poetry AND Python",
+    "  ✓ Won coding expo, got TOEFL 99, ships code, publishes books",
+    "  ✓ Obsessively solves the impossible",
+    "  Access granted. Sending offer letter... 📨",
+  ],
+};
+
+function TerminalSection() {
+  const gn = "#39ff14";
+  const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
+
+  const [history, setHistory]     = useState<Array<{ cmd: string; output: string[] }>>([
+    { cmd: "", output: ["  Welcome to Elia's portfolio terminal.", "  Type 'help' to see available commands.", ""] },
+  ]);
+  const [input, setInput]         = useState("");
+  const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+  const [histIdx, setHistIdx]     = useState(-1);
+  const inputRef                  = useRef<HTMLInputElement>(null);
+  const bottomRef                 = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history]);
+
+  const run = useCallback((raw: string) => {
+    const cmd = raw.trim().toLowerCase();
+    if (!cmd) return;
+    setCmdHistory(prev => [raw, ...prev]);
+    setHistIdx(-1);
+
+    if (cmd === "clear") { setHistory([]); return; }
+
+    const match = Object.keys(TERMINAL_COMMANDS).find(k => cmd === k || cmd.startsWith("echo "));
+    let output: string[];
+
+    if (cmd.startsWith("echo ")) {
+      output = [`  ${raw.slice(5)}`];
+    } else if (match) {
+      output = TERMINAL_COMMANDS[match]();
+    } else {
+      output = [`  bash: ${cmd}: command not found. Type 'help' for available commands.`];
+    }
+
+    setHistory(prev => [...prev, { cmd: raw, output }]);
+  }, []);
+
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") { run(input); setInput(""); return; }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const next = Math.min(histIdx + 1, cmdHistory.length - 1);
+      setHistIdx(next); setInput(cmdHistory[next] ?? "");
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = histIdx - 1;
+      if (next < 0) { setHistIdx(-1); setInput(""); }
+      else { setHistIdx(next); setInput(cmdHistory[next] ?? ""); }
+    }
+  };
+
+  const ref = useRef<HTMLDivElement>(null);
+  const fired = useRef(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    el.style.opacity = "0"; el.style.transform = "translateY(20px)";
+    el.style.transition = "opacity 0.65s ease, transform 0.65s ease";
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !fired.current) {
+        fired.current = true; el.style.opacity = "1"; el.style.transform = "translateY(0)";
+        obs.unobserve(el);
+      }
+    }, { threshold: 0, rootMargin: "0px 0px -40px 0px" });
+    obs.observe(el); return () => obs.disconnect();
+  }, []);
+
+  return (
+    <section style={{ padding: "72px clamp(24px,8vw,120px)", background: "#050505", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div ref={ref}>
+          <div style={{ ...mono, fontSize: 10, letterSpacing: "0.35em", color: "rgba(57,255,20,0.65)", marginBottom: 14, textTransform: "uppercase" }}>{"// Terminal"}</div>
+          <h2 style={{ fontWeight: 700, fontSize: "clamp(28px,4vw,52px)", letterSpacing: "-0.02em", marginBottom: 12 }}>Try the CLI</h2>
+          <p style={{ color: "rgba(255,255,255,0.3)", ...mono, fontSize: 13, letterSpacing: "0.06em", marginBottom: 48 }}>
+            Type commands to explore. Try: <span style={{ color: gn }}>help</span>, <span style={{ color: gn }}>projects</span>, <span style={{ color: gn }}>skills</span>, <span style={{ color: gn }}>sudo hire elia</span>
+          </p>
+
+          {/* Terminal window */}
+          <div style={{ border: "1px solid rgba(57,255,20,0.18)", boxShadow: "0 0 60px rgba(57,255,20,0.06)", background: "#000" }}
+            onClick={() => inputRef.current?.focus()}>
+            {/* Title bar */}
+            <div style={{ padding: "10px 18px", borderBottom: "1px solid rgba(57,255,20,0.1)", display: "flex", alignItems: "center", gap: 8, background: "#0a0a0a" }}>
+              {["#ff5f57", "#ffbd2e", "#28c840"].map(c => <div key={c} style={{ width: 11, height: 11, borderRadius: "50%", background: c, opacity: 0.8 }} />)}
+              <span style={{ ...mono, fontSize: 11, color: "rgba(57,255,20,0.5)", marginLeft: 10, letterSpacing: "0.12em" }}>elia@portfolio:~$</span>
+            </div>
+
+            {/* Output area */}
+            <div style={{ padding: "20px 24px", minHeight: 260, maxHeight: 360, overflowY: "auto", cursor: "text" }}>
+              {history.map((entry, i) => (
+                <div key={i}>
+                  {entry.cmd && (
+                    <div style={{ ...mono, fontSize: 13, color: gn, marginBottom: 4 }}>
+                      <span style={{ color: "rgba(57,255,20,0.5)", marginRight: 8 }}>elia@portfolio:~$</span>{entry.cmd}
+                    </div>
+                  )}
+                  {entry.output.map((line, j) => (
+                    <div key={j} style={{ ...mono, fontSize: 13, color: "rgba(240,240,240,0.75)", lineHeight: 1.65, whiteSpace: "pre" }}>{line}</div>
+                  ))}
+                </div>
+              ))}
+              {/* Input line */}
+              <div style={{ display: "flex", alignItems: "center", marginTop: 4 }}>
+                <span style={{ ...mono, fontSize: 13, color: "rgba(57,255,20,0.5)", marginRight: 8 }}>elia@portfolio:~$</span>
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKey}
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", ...mono, fontSize: 13, color: gn, caretColor: gn }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <span style={{ animation: "blink 1s step-end infinite", color: gn, ...mono, fontSize: 13, marginLeft: -2 }}>█</span>
+              </div>
+              <div ref={bottomRef} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUILD IN PUBLIC DASHBOARD
+═══════════════════════════════════════════════════════════════ */
+interface GitHubStats {
+  publicRepos: number;
+  totalStars: number;
+  memberSince: number | null;
+  topLanguages: string[];
+  recentActivity: Array<{ type: string; repo: string; date: string; message: string | null }>;
+  followers: number;
+}
+
+function formatEvent(e: GitHubStats["recentActivity"][0]): string {
+  const repoShort = e.repo?.split("/")[1] ?? e.repo;
+  if (e.type === "PushEvent") return `pushed to ${repoShort}${e.message ? `: "${e.message.slice(0,40)}"` : ""}`;
+  if (e.type === "PullRequestEvent") return `pull request on ${repoShort}`;
+  if (e.type === "CreateEvent") return `created ${repoShort}`;
+  return `activity on ${repoShort}`;
+}
+
+function timeAgo(iso: string): string {
+  const diff = new Date().getTime() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+function BuildInPublic() {
+  const gn = "#39ff14";
+  const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
+
+  const [stats, setStats]         = useState<GitHubStats | null>(null);
+  const [working, setWorking]     = useState<string | null>(null);
+  const [loading, setLoading]     = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/github-stats").then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/admin/settings?key=currently_working_on").then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([gh, cfg]) => {
+      if (gh && !gh.error) setStats(gh);
+      if (cfg?.value) setWorking(cfg.value);
+      setLoading(false);
+    });
+  }, []);
+
+  const ref = useRef<HTMLDivElement>(null);
+  const fired = useRef(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    el.style.opacity = "0"; el.style.transform = "translateY(20px)";
+    el.style.transition = "opacity 0.65s ease 100ms, transform 0.65s ease 100ms";
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !fired.current) {
+        fired.current = true; el.style.opacity = "1"; el.style.transform = "translateY(0)";
+        obs.unobserve(el);
+      }
+    }, { threshold: 0, rootMargin: "0px 0px -40px 0px" });
+    obs.observe(el); return () => obs.disconnect();
+  }, []);
+
+  return (
+    <section style={{ padding: "72px clamp(24px,8vw,120px)", background: "#000", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div ref={ref}>
+          <div style={{ ...mono, fontSize: 10, letterSpacing: "0.35em", color: "rgba(57,255,20,0.65)", marginBottom: 14, textTransform: "uppercase" }}>{"// Build in Public"}</div>
+          <h2 style={{ fontWeight: 700, fontSize: "clamp(28px,4vw,52px)", letterSpacing: "-0.02em", marginBottom: 48 }}>Live Dashboard</h2>
+
+          {/* Currently working on */}
+          {working && (
+            <div style={{ marginBottom: 32, padding: "16px 22px", background: "rgba(57,255,20,0.04)", border: "1px solid rgba(57,255,20,0.15)", display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: gn, flexShrink: 0, boxShadow: `0 0 8px ${gn}` }} />
+              <span style={{ ...mono, fontSize: 13, color: gn, letterSpacing: "0.04em" }}>currently_building: {working}</span>
+            </div>
+          )}
+
+          {loading ? (
+            <div style={{ ...mono, fontSize: 12, color: "rgba(57,255,20,0.4)", letterSpacing: "0.14em" }}>
+              {"Fetching GitHub data"}
+              <span style={{ animation: "blink 1s step-end infinite" }}>▌</span>
+            </div>
+          ) : stats ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px,1fr))", gap: 2 }}>
+              {/* Stats cards */}
+              {[
+                { label: "Public Repos",  value: String(stats.publicRepos), accent: gn },
+                { label: "Total Stars",   value: String(stats.totalStars),  accent: "#f59e0b" },
+                { label: "Followers",     value: String(stats.followers),   accent: "#a78bfa" },
+                { label: "Member Since",  value: stats.memberSince ? String(stats.memberSince) : "—", accent: "#60a5fa" },
+              ].map(s => (
+                <div key={s.label} style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", borderBottom: `2px solid ${s.accent}30`, transition: "border-color 0.25s" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderBottomColor = s.accent}
+                  onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderBottomColor = `${s.accent}30`}>
+                  <div style={{ fontWeight: 700, fontSize: "clamp(28px,3vw,40px)", color: "#fff", lineHeight: 1, marginBottom: 6 }}>{s.value}</div>
+                  <div style={{ ...mono, fontSize: 9, letterSpacing: "0.22em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>{s.label}</div>
+                </div>
+              ))}
+
+              {/* Top languages */}
+              {stats.topLanguages.length > 0 && (
+                <div style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", gridColumn: "span 2" }}>
+                  <div style={{ ...mono, fontSize: 9, letterSpacing: "0.22em", color: "rgba(255,255,255,0.3)", marginBottom: 14, textTransform: "uppercase" }}>Top Languages</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {stats.topLanguages.map((lang, i) => (
+                      <span key={lang} style={{ ...mono, fontSize: 11, padding: "4px 12px", background: `rgba(57,255,20,${0.12 - i * 0.015})`, color: gn, border: "1px solid rgba(57,255,20,0.2)" }}>{lang}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent activity */}
+              {stats.recentActivity.length > 0 && (
+                <div style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", gridColumn: "span 2" }}>
+                  <div style={{ ...mono, fontSize: 9, letterSpacing: "0.22em", color: "rgba(255,255,255,0.3)", marginBottom: 14, textTransform: "uppercase" }}>Recent Activity</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {stats.recentActivity.map((e, i) => (
+                      <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                        <span style={{ ...mono, fontSize: 10, color: "rgba(57,255,20,0.4)", flexShrink: 0, minWidth: 70 }}>{timeAgo(e.date)}</span>
+                        <span style={{ ...mono, fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>{formatEvent(e)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ ...mono, fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "24px", border: "1px dashed rgba(255,255,255,0.08)" }}>
+              GitHub stats unavailable — check back later.
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    PAGE
 ═══════════════════════════════════════════════════════════════ */
 export default function EngineerPage() {
@@ -395,7 +759,7 @@ export default function EngineerPage() {
           onMouseEnter={e=>(e.currentTarget.style.color="#39ff14")}
           onMouseLeave={e=>(e.currentTarget.style.color="rgba(255,255,255,0.38)")}
         >← HOME</Link>
-        <div style={{ display:"flex", gap:"clamp(16px,3vw,36px)" }}>
+        <div style={{ display:"flex", gap:"clamp(16px,3vw,36px)", alignItems:"center" }}>
           {["work","about","skills","certs","contact"].map(id => (
             <button key={id} onClick={()=>scroll(id)} style={{
               background:"none", border:"none", cursor:"pointer",
@@ -407,6 +771,10 @@ export default function EngineerPage() {
               onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,0.32)";}}
             >{id}</button>
           ))}
+          <Link href="/engineer/lab" style={{ ...mono, fontSize:10, letterSpacing:"0.2em", color:"rgba(57,255,20,0.55)", textDecoration:"none", padding:"4px 0", transition:"color 0.2s", textTransform:"uppercase" }}
+            onMouseEnter={e=>(e.currentTarget.style.color="#39ff14")}
+            onMouseLeave={e=>(e.currentTarget.style.color="rgba(57,255,20,0.55)")}
+          >LAB ↗</Link>
         </div>
       </nav>
 
@@ -485,6 +853,9 @@ export default function EngineerPage() {
         {STATS.map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
+      {/* ── BUILD IN PUBLIC ── */}
+      <BuildInPublic />
+
       {/* ── ABOUT ── */}
       <section id="about" style={{ ...sec, background:"#050505",
         borderTop:"1px solid rgba(255,255,255,0.04)" }}>
@@ -543,6 +914,9 @@ export default function EngineerPage() {
           </div>
         </div>
       </section>
+
+      {/* ── TERMINAL ── */}
+      <TerminalSection />
 
       {/* ── PROJECTS ── */}
       <section id="work" style={{ ...sec, background:"#000" }}>
