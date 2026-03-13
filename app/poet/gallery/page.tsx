@@ -40,40 +40,69 @@ const CELL_SIZES = [
   { c: 1, r: 1 }, { c: 2, r: 1 }, { c: 1, r: 2 },
 ];
 
-/* ─── Floating Orbs ─── */
+/* ─── Floating Orbs — city lights at night ─── */
+const ORB_COLORS = [
+  // warm street light amber
+  (alpha: number) => `radial-gradient(circle, rgba(255,170,60,${alpha}) 0%, rgba(255,140,20,${alpha * 0.3}) 50%, transparent 100%)`,
+  // neon pink/magenta
+  (alpha: number) => `radial-gradient(circle, rgba(255,80,160,${alpha}) 0%, rgba(200,40,120,${alpha * 0.3}) 50%, transparent 100%)`,
+  // cool white/blue
+  (alpha: number) => `radial-gradient(circle, rgba(180,200,255,${alpha}) 0%, rgba(120,160,255,${alpha * 0.3}) 50%, transparent 100%)`,
+  // pale green (traffic)
+  (alpha: number) => `radial-gradient(circle, rgba(100,255,140,${alpha}) 0%, rgba(60,200,100,${alpha * 0.3}) 50%, transparent 100%)`,
+  // soft gold
+  (alpha: number) => `radial-gradient(circle, rgba(255,200,100,${alpha}) 0%, rgba(220,160,40,${alpha * 0.3}) 50%, transparent 100%)`,
+];
+
+const GLOW_COLORS = ["255,170,60", "255,80,160", "180,200,255", "100,255,140", "255,200,100"];
+
+const ALL_ORBS = Array.from({ length: 40 }, (_, i) => {
+  const size = 6 + (i * 7919 + 3) % 115; // 6–120 px
+  const colorIdx = i % ORB_COLORS.length;
+  const alpha = 0.3 + (i * 1301 % 100) / 250; // 0.3–0.7
+  const blur = size < 20 ? 4 + (i * 919) % 10 : 12 + (i * 919) % 28;
+  const isLarge = size > 50;
+  return {
+    size,
+    x: (i * 3571 + 11) % 100,
+    y: (i * 1231 + 7) % 100,
+    duration: 14 + (i * 4567) % 22,
+    delay: (i * 2341) % 10,
+    background: ORB_COLORS[colorIdx](alpha),
+    blur,
+    boxShadow: isLarge ? `0 0 ${size * 0.8}px ${size * 0.3}px rgba(${GLOW_COLORS[colorIdx]},0.25)` : "none",
+    layer: i % 3 === 0 ? "back" : "front",
+  };
+});
+const BACK_ORBS = ALL_ORBS.filter(o => o.layer === "back");
+const FRONT_ORBS = ALL_ORBS.filter(o => o.layer === "front");
+
 function FloatingOrbs() {
-  const orbs = useRef(
-    Array.from({ length: 22 }, (_, i) => ({
-      size: 4 + (i * 7919 + 3) % 40,
-      x: (i * 3571 + 11) % 100,
-      y: (i * 1231 + 7) % 100,
-      duration: 12 + (i * 4567) % 20,
-      delay: (i * 2341) % 8,
-      // Alternate between warm amber and cool blue
-      color: i % 3 === 0
-        ? `rgba(255,180,80,${0.08 + (i % 5) * 0.03})`    // warm amber
-        : i % 3 === 1
-        ? `rgba(120,160,255,${0.06 + (i % 4) * 0.025})`   // cool blue
-        : `rgba(255,220,160,${0.05 + (i % 6) * 0.02})`,   // soft gold
-      blur: 10 + (i * 919) % 30,
-    }))
-  ).current;
+  const renderOrb = (o: typeof ALL_ORBS[number], i: number) => (
+    <div key={i} style={{
+      position: "absolute",
+      width: o.size, height: o.size,
+      left: `${o.x}%`, top: `${o.y}%`,
+      background: o.background,
+      borderRadius: "50%",
+      filter: `blur(${o.blur}px)`,
+      boxShadow: o.boxShadow,
+      animation: `orbFloat${i % 6} ${o.duration}s ease-in-out ${o.delay}s infinite`,
+      willChange: "transform, opacity",
+    }} />
+  );
 
   return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 35, overflow: "hidden" }}>
-      {orbs.map((o, i) => (
-        <div key={i} style={{
-          position: "absolute",
-          width: o.size, height: o.size,
-          left: `${o.x}%`, top: `${o.y}%`,
-          background: o.color,
-          borderRadius: "50%",
-          filter: `blur(${o.blur}px)`,
-          animation: `orbFloat${i % 4} ${o.duration}s ease-in-out ${o.delay}s infinite`,
-          willChange: "transform, opacity",
-        }} />
-      ))}
-    </div>
+    <>
+      {/* Back layer — behind the photo grid */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 5, overflow: "hidden" }}>
+        {BACK_ORBS.map((o, i) => renderOrb(o, i))}
+      </div>
+      {/* Front layer — above the photo grid but below nav */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 45, overflow: "hidden" }}>
+        {FRONT_ORBS.map((o, i) => renderOrb(o, i + BACK_ORBS.length))}
+      </div>
+    </>
   );
 }
 
@@ -263,6 +292,7 @@ function wrapMod(x: number, m: number) { return ((x % m) + m) % m; }
 export default function GalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [overlayItem, setOverlayItem] = useState<GalleryItem | null>(null);
+  const [tileSize, setTileSize] = useState({ w: 0, h: 0 });
   const closeOverlay = useCallback(() => setOverlayItem(null), []);
 
   // 2D drag state
@@ -302,7 +332,9 @@ export default function GalleryPage() {
     const el = tileRef.current;
     if (!el) return;
     const update = () => {
-      tileSizeRef.current = { w: el.offsetWidth, h: el.offsetHeight };
+      const size = { w: el.offsetWidth, h: el.offsetHeight };
+      tileSizeRef.current = size;
+      setTileSize(size);
     };
     update();
     const ro = new ResizeObserver(update);
@@ -383,7 +415,7 @@ export default function GalleryPage() {
   while (qIdx < quoteItems.length) baseGrid.push(quoteItems[qIdx++]);
 
   // Repeat within the tile to ensure enough rows to fill the viewport
-  const minItems = 24;
+  const minItems = 48;
   const tileItems: GalleryItem[] = [];
   if (baseGrid.length > 0) {
     const repeats = Math.max(1, Math.ceil(minItems / baseGrid.length));
@@ -420,6 +452,18 @@ export default function GalleryPage() {
           0%,100%{transform:translate(0,0) scale(1);opacity:0.4}
           50%{transform:translate(-60px,-80px) scale(1.25);opacity:0.8}
         }
+        @keyframes orbFloat4 {
+          0%,100%{transform:translate(0,0) scale(1);opacity:0.3}
+          20%{transform:translate(80px,-40px) scale(1.4);opacity:1}
+          50%{transform:translate(-70px,90px) scale(0.8);opacity:0.5}
+          80%{transform:translate(50px,60px) scale(1.2);opacity:0.9}
+        }
+        @keyframes orbFloat5 {
+          0%,100%{transform:translate(0,0) scale(1);opacity:0.5}
+          30%{transform:translate(-90px,-30px) scale(1.3);opacity:0.3}
+          60%{transform:translate(60px,-70px) scale(0.9);opacity:1}
+          80%{transform:translate(-30px,50px) scale(1.1);opacity:0.6}
+        }
         @keyframes grainDrift {
           0%,100%{transform:translate(0,0)}10%{transform:translate(-5%,-10%)}
           30%{transform:translate(7%,-25%)}50%{transform:translate(-15%,10%)}
@@ -446,41 +490,52 @@ export default function GalleryPage() {
       >
         {/* Tilted + scaled canvas like rodeo.film */}
         <div style={{
-          transform: "scale(1.05) rotate(3deg)",
+          transform: "scale(1.15) rotate(3deg)",
           transformOrigin: "center center",
-          position: "absolute", inset: "-10%",
-          width: "120%", height: "120%",
+          position: "absolute", inset: "-15%",
+          width: "130%", height: "130%",
         }}>
           <div ref={innerRef} style={{ willChange: "transform" }}>
-            {/* 2×2 tile arrangement — modulo wrapping makes this infinite in all 4 directions */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, max(90vw, 1200px))" }}>
-              {[0, 1, 2, 3].map(tileIdx => (
-                <div key={tileIdx} ref={tileIdx === 0 ? tileRef : undefined}>
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gridAutoRows: "clamp(140px, 18vw, 260px)",
-                    gap: 2,
-                    width: "max(90vw, 1200px)",
+            {/* 2×2 tile arrangement using absolute positioning — eliminates CSS Grid height mismatches */}
+            <div style={{ position: "relative" }}>
+              {[0, 1, 2, 3].map(tileIdx => {
+                const col = tileIdx % 2;
+                const row = Math.floor(tileIdx / 2);
+                const { w: tileW, h: tileH } = tileSize;
+                // Defer rendering duplicate tiles until we have measured dimensions
+                if (tileIdx > 0 && tileW === 0) return null;
+                return (
+                  <div key={tileIdx} ref={tileIdx === 0 ? tileRef : undefined} style={{
+                    position: tileIdx === 0 ? "relative" : "absolute",
+                    top: tileIdx === 0 ? undefined : row * tileH,
+                    left: tileIdx === 0 ? undefined : col * tileW,
                   }}>
-                    {tileItems.map((item, i) => {
-                      const size = CELL_SIZES[i % CELL_SIZES.length];
-                      return (
-                        <div key={`t${tileIdx}_${item.id}`} style={{
-                          gridColumn: `span ${size.c}`,
-                          gridRow: `span ${size.r}`,
-                        }}>
-                          {item.type === "quote" ? (
-                            <QuoteCell item={item} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
-                          ) : (
-                            <GalleryCell item={item} index={i} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
-                          )}
-                        </div>
-                      );
-                    })}
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, 1fr)",
+                      gridAutoRows: "clamp(180px, 22vw, 320px)",
+                      gap: 2,
+                      width: "max(100vw, 1600px)",
+                    }}>
+                      {tileItems.map((item, i) => {
+                        const size = CELL_SIZES[i % CELL_SIZES.length];
+                        return (
+                          <div key={`t${tileIdx}_${item.id}`} style={{
+                            gridColumn: `span ${size.c}`,
+                            gridRow: `span ${size.r}`,
+                          }}>
+                            {item.type === "quote" ? (
+                              <QuoteCell item={item} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
+                            ) : (
+                              <GalleryCell item={item} index={i} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

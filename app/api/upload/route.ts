@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 function isAuthorized(req: NextRequest): boolean {
   const auth = req.headers.get("Authorization") ?? "";
   return auth === process.env.ADMIN_PASSWORD;
