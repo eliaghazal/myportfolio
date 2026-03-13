@@ -395,12 +395,17 @@ const SEED_EXPERIMENTS: Experiment[] = [
 /* ═══════════════════════════════════════════════════════════════
    CARD
 ═══════════════════════════════════════════════════════════════ */
+function parseTechArray(tech: string[] | string): string[] {
+  if (Array.isArray(tech)) return tech;
+  try { return JSON.parse(tech); } catch { return []; }
+}
+
 function ExperimentCard({ exp, accent }: { exp: Experiment | (ReturnType<typeof mapDbExp>); accent: string }) {
   const [open, setOpen]     = useState(false);
   const [hov, setHov]       = useState(false);
   const ref                 = useFade(0);
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
-  const tech: string[] = Array.isArray((exp as Experiment).tech) ? (exp as Experiment).tech : (() => { try { return JSON.parse((exp as { tech: string }).tech); } catch { return []; } })();
+  const tech: string[] = parseTechArray((exp as Experiment).tech);
 
   const statusColor = { LIVE: gn, DEMO: "#f59e0b", CONCEPT: dim, COMPLETED: "#60a5fa" }[exp.status as string] ?? dim;
 

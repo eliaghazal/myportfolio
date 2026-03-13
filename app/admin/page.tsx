@@ -444,7 +444,7 @@ export default function AdminPage() {
                   <div key={item.id} style={{ background: card, border: `1px solid ${border}`, padding: 12 }}>
                     {item.type === "image" && item.image_url
                       ? <img src={item.image_url} alt="" style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block", marginBottom: 8 }} />
-                      : <div style={{ width: "100%", aspectRatio: "1/1", background: surface, display: "flex", alignItems: "center", justifyContent: "center", padding: 10, marginBottom: 8 }}><span style={{ fontSize: 12, color: dim, fontStyle: "italic", textAlign: "center", lineHeight: 1.5 }}>&quot;{item.text?.slice(0, 60)}&hellip;&quot;</span></div>
+                      : <div style={{ width: "100%", aspectRatio: "1/1", background: surface, display: "flex", alignItems: "center", justifyContent: "center", padding: 10, marginBottom: 8 }}><span style={{ fontSize: 12, color: dim, fontStyle: "italic", textAlign: "center", lineHeight: 1.5 }}>{`"${item.text?.slice(0, 60)}…"`}</span></div>
                     }
                     {item.poem && <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: rustDim, marginBottom: 8 }}>— {item.poem}</div>}
                     <button onClick={() => deleteGalleryItem(item.id)} style={{ ...btnStyle(red), fontSize: 8, padding: "5px 10px", width: "100%" }}>Remove</button>
