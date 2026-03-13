@@ -3,284 +3,292 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 
-const ink     = "#1c1814";
-const paper   = "#f4f1ec";
-const rust    = "#b85c38";
-const rustDim = "rgba(184,92,56,0.5)";
-const dim     = "rgba(28,24,20,0.42)";
-const faint   = "rgba(28,24,20,0.12)";
-const border  = "rgba(28,24,20,0.1)";
+/* ─── Palette ─── */
+const bg       = "#0a0908";
+const bgLight  = "#141210";
+const paper    = "#f4f1ec";
+const rust     = "#b85c38";
+const rustDim  = "rgba(184,92,56,0.5)";
+const dim      = "rgba(244,241,236,0.35)";
 
 type AspectRatio = "original" | "1:1" | "16:9" | "3:4" | "21:9";
 
 interface GalleryItem {
   id: string;
-  type: "image" | "quote";
+  type: "image" | "video" | "quote";
   text?: string;
   poem?: string;
   imageUrl?: string;
+  image_url?: string;
+  video_url?: string;
+  thumbnail_url?: string;
   caption?: string;
   rotation?: number;
   aspect_ratio?: AspectRatio;
 }
 
-const POEM_REEL = [
-  { line: "Come all,", sub: "we're witnessing the eclipse.", poem: "The Ghost of Town" },
-  { line: "I am bound by an invisible thread,", sub: "not to another — but to my own soul.", poem: "Invisible Thread" },
-  { line: "You're the sun,", sub: "and I am the moon.", poem: "Circle of Love" },
-  { line: "Oh sea,", sub: "how much I see myself in you.", poem: "Oh Sea" },
-  { line: "In another life,", sub: "maybe our love would be alive.", poem: "In Another Life" },
-  { line: "Land of God,", sub: "we will return to reclaim you.", poem: "Land of God" },
-  { line: "Behind my brown doe eyes,", sub: "waterfalls cascade.", poem: "Behind My Brown Doe Eyes" },
-  { line: "Keep your boat afloat", sub: "and sail away.", poem: "Introduction" },
+/* ─── Film Grain SVG (data URI) ─── */
+const GRAIN_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
+
+/* ─── Light Leak gradients for polaroid effect ─── */
+const LIGHT_LEAKS = [
+  "linear-gradient(135deg, rgba(255,120,50,0.18) 0%, transparent 50%, rgba(120,80,200,0.08) 100%)",
+  "linear-gradient(225deg, rgba(255,200,100,0.15) 0%, transparent 40%, rgba(200,50,80,0.1) 100%)",
+  "linear-gradient(45deg, rgba(100,200,255,0.1) 0%, transparent 50%, rgba(255,150,50,0.15) 100%)",
+  "linear-gradient(315deg, rgba(255,80,120,0.12) 0%, transparent 45%, rgba(80,200,150,0.08) 100%)",
+  "linear-gradient(180deg, rgba(255,220,150,0.2) 0%, transparent 40%, rgba(50,50,150,0.1) 100%)",
+  "linear-gradient(0deg, rgba(200,100,50,0.15) 0%, transparent 50%, rgba(100,180,255,0.1) 100%)",
 ];
 
-function useFade(delay = 0) {
-  const ref = useRef<HTMLDivElement>(null);
-  const fired = useRef(false);
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    el.style.opacity = "0"; el.style.transform = "translateY(14px)";
-    el.style.transition = `opacity 0.7s ease ${delay}ms, transform 0.7s ease ${delay}ms`;
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !fired.current) {
-        fired.current = true;
-        el.style.opacity = "1"; el.style.transform = "translateY(0)";
-        obs.unobserve(el);
-      }
-    }, { threshold: 0, rootMargin: "0px 0px -40px 0px" });
-    obs.observe(el); return () => obs.disconnect();
-  }, [delay]);
-  return ref;
-}
+/* ─── Masonry grid layout templates (varying cell sizes) ─── */
+const GRID_PATTERNS = [
+  { col: "span 2", row: "span 2" },  // large
+  { col: "span 1", row: "span 2" },  // tall
+  { col: "span 1", row: "span 1" },  // small
+  { col: "span 2", row: "span 1" },  // wide
+  { col: "span 1", row: "span 1" },  // small
+  { col: "span 1", row: "span 2" },  // tall
+  { col: "span 2", row: "span 2" },  // large
+  { col: "span 1", row: "span 1" },  // small
+  { col: "span 1", row: "span 1" },  // small
+  { col: "span 2", row: "span 1" },  // wide
+  { col: "span 1", row: "span 2" },  // tall
+  { col: "span 1", row: "span 1" },  // small
+];
 
-/* Polaroid Overlay */
+/* ─── Polaroid overlay (full-screen lightbox) ─── */
 function PolaroidOverlay({ item, onClose }: { item: GalleryItem; onClose: () => void }) {
   const visRef = useRef<HTMLDivElement>(null);
+  const mediaUrl = item.type === "video" ? item.video_url : (item.imageUrl || item.image_url);
+
   useEffect(() => {
     const el = visRef.current;
-    if (el) { el.style.opacity = "0"; requestAnimationFrame(() => { if (el) el.style.opacity = "1"; }); }
+    if (el) { el.style.opacity = "0"; el.style.transform = "scale(0.92) rotate(-2deg)"; requestAnimationFrame(() => { if (el) { el.style.opacity = "1"; el.style.transform = "scale(1) rotate(-1.5deg)"; } }); }
     const fn = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", fn); return () => window.removeEventListener("keydown", fn);
   }, [onClose]);
+
   return (
     <div onClick={onClose} style={{
       position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(10,8,6,0.92)", backdropFilter: "blur(20px)",
+      background: "rgba(5,4,3,0.95)", backdropFilter: "blur(24px)",
       transition: "opacity 0.4s ease", padding: "clamp(16px,4vw,40px)",
     }}>
       <div ref={visRef} onClick={e => e.stopPropagation()} style={{
         background: "#faf8f4",
-        padding: "clamp(14px,2vw,24px) clamp(14px,2vw,24px) clamp(36px,5vw,56px)",
-        boxShadow: "0 40px 120px rgba(0,0,0,0.7)",
+        padding: "clamp(10px,1.5vw,18px) clamp(10px,1.5vw,18px) clamp(32px,4vw,50px)",
+        boxShadow: "0 40px 120px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03)",
         transform: "rotate(-1.5deg)",
-        transition: "opacity 0.5s cubic-bezier(0.34,1.56,0.64,1)",
-        maxWidth: "min(90vw, 580px)", width: "100%", position: "relative",
+        transition: "opacity 0.6s cubic-bezier(0.34,1.56,0.64,1), transform 0.6s cubic-bezier(0.34,1.56,0.64,1)",
+        maxWidth: "min(92vw, 640px)", width: "100%", position: "relative",
       }}>
+        {/* Polaroid texture */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.03, backgroundImage: GRAIN_SVG, backgroundSize: "120px", zIndex: 5 }} />
+
         <button onClick={onClose} style={{
-          position: "absolute", top: 12, right: 14, background: "none", border: "none",
-          cursor: "pointer", fontSize: 18, color: "rgba(28,24,20,0.4)", lineHeight: 1, padding: 4,
-        }}>x</button>
-        {item.type === "image" && item.imageUrl ? (
-          <div style={{ width: "100%", overflow: "hidden", background: "#e8e4de" }}>
+          position: "absolute", top: 8, right: 10, background: "none", border: "none",
+          cursor: "pointer", fontSize: 20, color: "rgba(28,24,20,0.3)", lineHeight: 1, padding: 6, zIndex: 10,
+        }}>×</button>
+
+        {item.type === "video" && item.video_url ? (
+          <div style={{ width: "100%", overflow: "hidden", background: "#1a1714", position: "relative" }}>
+            <video src={item.video_url} controls autoPlay playsInline style={{ width: "100%", height: "auto", maxHeight: "60vh", objectFit: "contain", display: "block" }} />
+          </div>
+        ) : mediaUrl ? (
+          <div style={{ width: "100%", overflow: "hidden", background: "#e8e4de", position: "relative" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.imageUrl} alt={item.caption || ""} style={{ width: "100%", height: "auto", maxHeight: 480, objectFit: "cover", display: "block" }} />
+            <img src={mediaUrl} alt={item.caption || ""} style={{ width: "100%", height: "auto", maxHeight: "60vh", objectFit: "contain", display: "block" }} />
+            {/* Light leak on polaroid */}
+            <div style={{ position: "absolute", inset: 0, background: LIGHT_LEAKS[0], pointerEvents: "none", mixBlendMode: "overlay" }} />
           </div>
         ) : (
-          <div style={{ minHeight: 200, background: "rgba(28,24,20,0.04)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, border: "1px solid rgba(28,24,20,0.12)" }}>
-            <p style={{ fontFamily: "var(--font-space)", fontWeight: 600, fontSize: "clamp(14px,1.6vw,20px)", lineHeight: 1.65, color: ink, textAlign: "center" }}>"{item.text}"</p>
+          <div style={{ minHeight: 200, background: "rgba(28,24,20,0.04)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, border: "1px solid rgba(28,24,20,0.1)" }}>
+            <p style={{ fontFamily: "var(--font-cormorant)", fontStyle: "italic", fontWeight: 500, fontSize: "clamp(16px,2vw,24px)", lineHeight: 1.65, color: "#1c1814", textAlign: "center" }}>"{item.text}"</p>
           </div>
         )}
-        <div style={{ marginTop: 14 }}>
-          {item.caption && <div style={{ fontFamily: "var(--font-space)", fontWeight: 600, fontSize: 14, color: ink, marginBottom: 4 }}>{item.caption}</div>}
-          {item.poem && <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: rustDim, letterSpacing: "0.18em" }}>-- {item.poem}</div>}
+
+        <div style={{ marginTop: 14, position: "relative", zIndex: 2 }}>
+          {item.caption && <div style={{ fontFamily: "var(--font-space)", fontWeight: 600, fontSize: 13, color: "#1c1814", marginBottom: 4 }}>{item.caption}</div>}
+          {item.poem && <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(184,92,56,0.65)", letterSpacing: "0.18em" }}>— {item.poem}</div>}
         </div>
       </div>
     </div>
   );
 }
 
-/* Film Reel */
-function FilmReel({ items, onImageClick }: { items: GalleryItem[]; onImageClick: (item: GalleryItem) => void }) {
-  const trackRef    = useRef<HTMLDivElement>(null);
-  const animRef     = useRef<number>(0);
-  const posRef      = useRef(0);
-  const velRef      = useRef(0);
-  const modeRef     = useRef<"auto" | "hover" | "drag">("auto");
-  const mouseXRef   = useRef(0);
-  const dragStartX  = useRef(0);
-  const dragStartPos= useRef(0);
-  const lastX       = useRef(0);
-  const lastTime    = useRef(0);
-  const isDragging  = useRef(false);
-  const AUTO_SPEED  = 0.55;
-
-  const imageItems = items.filter(it => it.type === "image" && it.imageUrl);
-  type ReelEntry =
-    | { kind: "poem"; line: string; sub: string; poem: string }
-    | { kind: "image"; imageUrl: string; caption?: string; poem?: string; aspect_ratio?: AspectRatio; item: GalleryItem };
-  const combined: ReelEntry[] = [];
-  let imgIdx = 0;
-  POEM_REEL.forEach((p, i) => {
-    combined.push({ kind: "poem", ...p });
-    if ((i + 1) % 3 === 0 && imgIdx < imageItems.length) {
-      const img = imageItems[imgIdx++];
-      combined.push({ kind: "image", imageUrl: img.imageUrl!, caption: img.caption, poem: img.poem, aspect_ratio: img.aspect_ratio, item: img });
-    }
-  });
-  while (imgIdx < imageItems.length) {
-    const img = imageItems[imgIdx++];
-    combined.push({ kind: "image", imageUrl: img.imageUrl!, caption: img.caption, poem: img.poem, aspect_ratio: img.aspect_ratio, item: img });
-  }
-  const frames = [...combined, ...combined];
+/* ─── Media Cell (image or video with polaroid effects) ─── */
+function MediaCell({
+  item,
+  lightLeakIndex,
+  onClick,
+}: {
+  item: GalleryItem;
+  lightLeakIndex: number;
+  onClick: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const mediaUrl = item.type === "video"
+    ? (item.thumbnail_url || item.image_url || item.video_url)
+    : (item.imageUrl || item.image_url);
+  const isVideo = item.type === "video" && item.video_url;
 
   useEffect(() => {
-    const track = trackRef.current; if (!track) return;
-    const animate = () => {
-      if (modeRef.current === "auto") {
-        velRef.current = -AUTO_SPEED;
-        posRef.current += velRef.current;
-      } else if (modeRef.current === "hover") {
-        const rect = track.parentElement?.getBoundingClientRect();
-        if (rect) {
-          const rel = (mouseXRef.current - rect.left) / rect.width;
-          const target = (rel - 0.5) * 2;
-          velRef.current = target * 2.2;
-          posRef.current += velRef.current;
-        }
+    if (isVideo && videoRef.current) {
+      if (hovered) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
       }
-      const half = track.scrollWidth / 2;
-      if (posRef.current <= -half) posRef.current += half;
-      if (posRef.current > 0) posRef.current -= half;
-      track.style.transform = `translateX(${posRef.current}px)`;
-      animRef.current = requestAnimationFrame(animate);
-    };
-    animRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animRef.current);
-  }, [combined.length]);
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    mouseXRef.current = e.clientX;
-    if (modeRef.current !== "drag") modeRef.current = "hover";
-  }, []);
-  const onMouseLeave = useCallback(() => {
-    if (modeRef.current !== "drag") modeRef.current = "auto";
-  }, []);
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    isDragging.current = true;
-    dragStartX.current = e.clientX; dragStartPos.current = posRef.current;
-    lastX.current = e.clientX; lastTime.current = performance.now();
-    modeRef.current = "drag";
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging.current) return;
-    const dx = e.clientX - dragStartX.current;
-    const now = performance.now();
-    velRef.current = (e.clientX - lastX.current) / (now - lastTime.current) * 16;
-    lastX.current = e.clientX; lastTime.current = now;
-    posRef.current = dragStartPos.current + dx;
-  }, []);
-  const onPointerUp = useCallback(() => {
-    if (!isDragging.current) return;
-    isDragging.current = false; modeRef.current = "auto";
-  }, []);
+    }
+  }, [hovered, isVideo]);
 
   return (
-    <div style={{ position: "relative", overflow: "hidden", background: ink, borderTop: "1px solid rgba(28,24,20,0.1)", borderBottom: "1px solid rgba(28,24,20,0.1)", userSelect: "none" }}
-      onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}
-      onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        cursor: "pointer",
+        transform: hovered ? "scale(1.015)" : "scale(1)",
+        transition: "transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 0.5s ease",
+        boxShadow: hovered ? "0 20px 60px rgba(0,0,0,0.6)" : "none",
+        zIndex: hovered ? 10 : 1,
+      }}
     >
-      <div style={{ display: "flex", height: 22, background: "#0a0805", paddingTop: 5, overflow: "hidden" }}>
-        {Array.from({ length: 120 }).map((_, i) => (
-          <div key={i} style={{ width: 22, flexShrink: 0, display: "flex", justifyContent: "center" }}>
-            <div style={{ width: 11, height: 9, background: "rgba(244,241,236,0.09)", borderRadius: 2, border: "1px solid rgba(244,241,236,0.06)" }} />
-          </div>
-        ))}
-      </div>
-      <div ref={trackRef} style={{ display: "flex", willChange: "transform", cursor: "grab" }}>
-        {frames.map((entry, i) => {
-          const frameW = "clamp(220px,24vw,340px)";
-          const frameH = "clamp(180px,21vw,265px)";
-          return (
-            <div key={i} style={{
-              flexShrink: 0, width: frameW, minHeight: frameH, borderRight: "1px solid rgba(244,241,236,0.05)",
-              display: "flex", flexDirection: "column",
-              justifyContent: entry.kind === "image" ? "flex-start" : "flex-end",
-              padding: entry.kind === "image" ? 0 : "clamp(20px,3vw,34px) clamp(14px,2vw,24px)",
-              position: "relative", overflow: "hidden",
-              cursor: entry.kind === "image" ? "pointer" : "grab",
-            }} onClick={entry.kind === "image" ? () => onImageClick(entry.item) : undefined}>
-              <div style={{ position: "absolute", top: 6, right: 10, zIndex: 2, fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", color: entry.kind === "image" ? "rgba(244,241,236,0.55)" : "rgba(244,241,236,0.12)" }}>
-                {String((i % combined.length) + 1).padStart(3, "0")}A
-              </div>
-              {entry.kind === "image" ? (
-                <>
-                  <div style={{ width: "100%", minHeight: frameH, flex: 1 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={entry.imageUrl} alt={entry.caption || ""} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </div>
-                  {(entry.caption || entry.poem) && (
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)", padding: "28px 12px 10px" }}>
-                      {entry.caption && <div style={{ fontFamily: "var(--font-space)", fontWeight: 600, fontSize: 11, color: "rgba(244,241,236,0.92)", marginBottom: 3 }}>{entry.caption}</div>}
-                      {entry.poem && <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.18em", color: "rgba(184,92,56,0.82)" }}>-- {entry.poem}</div>}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div style={{ fontWeight: 700, fontSize: "clamp(13px,1.6vw,20px)", lineHeight: 1.25, color: paper, marginBottom: 9 }}>{entry.line}</div>
-                  <div style={{ fontSize: "clamp(11px,1.2vw,15px)", color: "rgba(244,241,236,0.48)", lineHeight: 1.55, marginBottom: 13 }}>{entry.sub}</div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.22em", color: rustDim }}>-- {entry.poem}</div>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", height: 22, background: "#0a0805", paddingBottom: 5, overflow: "hidden" }}>
-        {Array.from({ length: 120 }).map((_, i) => (
-          <div key={i} style={{ width: 22, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "flex-end" }}>
-            <div style={{ width: 11, height: 9, background: "rgba(244,241,236,0.09)", borderRadius: 2, border: "1px solid rgba(244,241,236,0.06)" }} />
-          </div>
-        ))}
+      {/* Main media */}
+      {isVideo && hovered ? (
+        <video
+          ref={videoRef}
+          src={item.video_url}
+          muted
+          playsInline
+          loop
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : mediaUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={mediaUrl}
+          alt={item.caption || ""}
+          loading="lazy"
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : null}
+
+      {/* Film grain overlay */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        backgroundImage: GRAIN_SVG, backgroundSize: "140px",
+        opacity: 0.06, mixBlendMode: "overlay",
+      }} />
+
+      {/* Light leak / color tint overlay */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        background: LIGHT_LEAKS[lightLeakIndex % LIGHT_LEAKS.length],
+        mixBlendMode: "screen",
+        opacity: hovered ? 0.7 : 0.45,
+        transition: "opacity 0.5s ease",
+      }} />
+
+      {/* Vignette */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        background: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.35) 100%)",
+      }} />
+
+      {/* Video play icon */}
+      {isVideo && !hovered && (
+        <div style={{
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          width: 48, height: 48, borderRadius: "50%",
+          background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          border: "1.5px solid rgba(255,255,255,0.2)",
+        }}>
+          <div style={{ width: 0, height: 0, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderLeft: "14px solid rgba(255,255,255,0.85)", marginLeft: 3 }} />
+        </div>
+      )}
+
+      {/* Bottom gradient + caption */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)",
+        padding: "48px 14px 12px",
+        opacity: hovered ? 1 : 0,
+        transform: hovered ? "translateY(0)" : "translateY(8px)",
+        transition: "opacity 0.4s ease, transform 0.4s ease",
+      }}>
+        {item.caption && (
+          <div style={{
+            fontFamily: "var(--font-space)", fontWeight: 600, fontSize: 12,
+            color: "rgba(244,241,236,0.95)", letterSpacing: "-0.01em", marginBottom: 3,
+          }}>{item.caption}</div>
+        )}
+        {item.poem && (
+          <div style={{
+            fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em",
+            color: "rgba(184,92,56,0.85)",
+          }}>— {item.poem}</div>
+        )}
       </div>
     </div>
   );
 }
 
-/* Drag Canvas - Rodeo Film style */
-interface CanvasCard {
-  id: string;
-  kind: "image" | "poem";
-  item?: GalleryItem;
-  poem?: { line: string; sub: string; poem: string };
-  x: number;
-  y: number;
-  rotation: number;
-  width: number;
-  zBase: number;
+/* ─── Quote Cell ─── */
+function QuoteCell({ item, onClick }: { item: GalleryItem; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        cursor: "pointer",
+        background: bgLight,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "clamp(20px,3vw,40px)",
+        transform: hovered ? "scale(1.01)" : "scale(1)",
+        transition: "transform 0.5s ease, background 0.5s ease",
+        border: `1px solid rgba(184,92,56,${hovered ? 0.25 : 0.08})`,
+      }}
+    >
+      {/* Grain */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: GRAIN_SVG, backgroundSize: "140px", opacity: 0.04 }} />
+
+      <div style={{
+        fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.35em",
+        color: rustDim, textTransform: "uppercase", marginBottom: 16,
+      }}>verse</div>
+      <p style={{
+        fontFamily: "var(--font-cormorant)", fontStyle: "italic", fontWeight: 500,
+        fontSize: "clamp(15px,1.8vw,22px)", lineHeight: 1.55,
+        color: paper, textAlign: "center", maxWidth: 320,
+        opacity: hovered ? 1 : 0.85, transition: "opacity 0.4s ease",
+      }}>
+        &ldquo;{item.text}&rdquo;
+      </p>
+      {item.poem && (
+        <div style={{
+          fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em",
+          color: rustDim, marginTop: 16,
+        }}>— {item.poem}</div>
+      )}
+    </div>
+  );
 }
 
-function buildCards(items: GalleryItem[]): CanvasCard[] {
-  const cards: CanvasCard[] = [];
-  items.filter(it => it.imageUrl).forEach((item, i) => {
-    const a = (i * 7919 + 3) % 1000 / 1000;
-    const b = (i * 3571 + 11) % 1000 / 1000;
-    const c = (i * 1231 + 7) % 1000 / 1000;
-    const w = [240, 300, 260, 280, 320][i % 5];
-    cards.push({ id: item.id, kind: "image", item, x: a * 3200 - 800, y: b * 2200 - 500, rotation: c * 14 - 7, width: w, zBase: i });
-  });
-  POEM_REEL.forEach((p, i) => {
-    const a = (i * 6131 + 17) % 1000 / 1000;
-    const b = (i * 2713 + 23) % 1000 / 1000;
-    const c = (i * 3317 + 7) % 1000 / 1000;
-    cards.push({ id: "poem-" + i, kind: "poem", poem: p, x: a * 3000 - 700, y: b * 2000 - 400, rotation: c * 10 - 5, width: 250, zBase: 100 + i });
-  });
-  return cards;
-}
-
+/* ─── Draggable Canvas Section (rodeo.film style) ─── */
 function DragCanvas({ items, onOpenItem }: { items: GalleryItem[]; onOpenItem: (item: GalleryItem) => void }) {
   const canvasRef  = useRef<HTMLDivElement>(null);
   const posRef     = useRef({ x: 0, y: 0 });
@@ -290,15 +298,42 @@ function DragCanvas({ items, onOpenItem }: { items: GalleryItem[]; onOpenItem: (
   const lastMouse  = useRef({ x: 0, y: 0, t: 0 });
   const animRef    = useRef<number>(0);
   const clickGuard = useRef(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const cards = useRef<CanvasCard[]>([]);
+
+  const mediaItems = items.filter(it => (it.type === "image" || it.type === "video") && (it.imageUrl || it.image_url || it.video_url));
+  const quoteItems = items.filter(it => it.type === "quote" && it.text);
+
+  interface ScatteredCard {
+    id: string;
+    item: GalleryItem;
+    x: number; y: number;
+    rotation: number;
+    width: number;
+    zBase: number;
+  }
+
+  const cards = useRef<ScatteredCard[]>([]);
 
   useEffect(() => {
-    cards.current = buildCards(items);
+    const all = [...mediaItems, ...quoteItems];
+    cards.current = all.map((item, i) => {
+      const seed1 = (i * 7919 + 3) % 1000 / 1000;
+      const seed2 = (i * 3571 + 11) % 1000 / 1000;
+      const seed3 = (i * 1231 + 7) % 1000 / 1000;
+      const widths = [260, 320, 240, 300, 280, 340, 220, 360];
+      return {
+        id: item.id,
+        item,
+        x: seed1 * 3600 - 900,
+        y: seed2 * 2600 - 600,
+        rotation: seed3 * 16 - 8,
+        width: widths[i % widths.length],
+        zBase: i,
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
 
   useEffect(() => {
-    if (cards.current.length === 0) cards.current = buildCards([]);
     const animate = () => {
       if (!isDragging.current) {
         velRef.current.x *= 0.93;
@@ -341,11 +376,13 @@ function DragCanvas({ items, onOpenItem }: { items: GalleryItem[]; onOpenItem: (
 
   const onPointerUp = useCallback(() => { isDragging.current = false; }, []);
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+
   return (
     <div
       style={{
         position: "relative", width: "100%", height: "100vh",
-        background: "#0d0b09", overflow: "hidden",
+        background: bg, overflow: "hidden",
         cursor: "grab", userSelect: "none", touchAction: "none",
       }}
       onPointerDown={onPointerDown}
@@ -356,117 +393,96 @@ function DragCanvas({ items, onOpenItem }: { items: GalleryItem[]; onOpenItem: (
       {/* Grain */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", opacity: 0.04,
-        backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-        backgroundSize: "180px 180px", animation: "grainShift 0.12s steps(1) infinite",
+        backgroundImage: GRAIN_SVG, backgroundSize: "180px",
+        animation: "grainShift 0.12s steps(1) infinite",
       }} />
       {/* Vignette */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 9, pointerEvents: "none",
-        background: "radial-gradient(ellipse at center, transparent 40%, rgba(8,6,4,0.75) 100%)",
+        background: "radial-gradient(ellipse at center, transparent 35%, rgba(5,4,3,0.8) 100%)",
       }} />
       {/* Hint */}
       <div style={{
         position: "absolute", bottom: 36, left: "50%", transform: "translateX(-50%)",
         zIndex: 20, pointerEvents: "none",
         fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.4em",
-        color: "rgba(244,241,236,0.22)", textTransform: "uppercase",
+        color: "rgba(244,241,236,0.2)", textTransform: "uppercase",
         animation: "hintFade 3s ease-in-out infinite",
       }}>
-        drag to explore
+        touch and move
       </div>
       {/* Canvas */}
       <div ref={canvasRef} style={{ position: "absolute", top: "50%", left: "50%", willChange: "transform" }}>
-        {cards.current.map((card) => (
-          <div
-            key={card.id}
-            data-card="true"
-            style={{
-              position: "absolute",
-              left: card.x, top: card.y,
-              width: card.width,
-              zIndex: activeId === card.id ? 500 : card.zBase,
-              transform: `rotate(${card.rotation}deg)`,
-              transition: "transform 0.38s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.38s ease",
-              boxShadow: card.kind === "image" ? "0 8px 48px rgba(0,0,0,0.6)" : "0 4px 28px rgba(0,0,0,0.45)",
-            }}
-            onMouseEnter={e => {
-              setActiveId(card.id);
-              const el = e.currentTarget as HTMLElement;
-              el.style.transform = "rotate(0deg) translateY(-14px) scale(1.04)";
-              el.style.boxShadow = card.kind === "image" ? "0 32px 90px rgba(0,0,0,0.75)" : "0 24px 70px rgba(0,0,0,0.6)";
-            }}
-            onMouseLeave={e => {
-              setActiveId(null);
-              const el = e.currentTarget as HTMLElement;
-              el.style.transform = `rotate(${card.rotation}deg)`;
-              el.style.boxShadow = card.kind === "image" ? "0 8px 48px rgba(0,0,0,0.6)" : "0 4px 28px rgba(0,0,0,0.45)";
-            }}
-            onClick={() => {
-              if (clickGuard.current) return;
-              if (card.kind === "image" && card.item) onOpenItem(card.item);
-            }}
-          >
-            {card.kind === "image" && card.item?.imageUrl ? (
-              <div style={{ background: "#f5f2ed", padding: "12px 12px 48px", cursor: "pointer" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={card.item.imageUrl} alt={card.item.caption || ""} draggable={false}
-                  style={{
-                    width: "100%", display: "block", objectFit: "cover",
-                    aspectRatio: (() => {
-                      const map: Record<string, string> = { "1:1": "1/1", "16:9": "16/9", "3:4": "3/4", "21:9": "21/9" };
-                      return map[card.item!.aspect_ratio ?? ""] ?? "4/3";
-                    })(),
-                  }}
-                />
-                <div style={{ marginTop: 10 }}>
-                  {card.item.caption && <div style={{ fontFamily: "var(--font-space)", fontWeight: 700, fontSize: 11, color: ink, letterSpacing: "-0.01em", lineHeight: 1.3 }}>{card.item.caption}</div>}
-                  {card.item.poem && <div style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.18em", color: rustDim, marginTop: 4 }}>-- {card.item.poem}</div>}
+        {cards.current.map((card) => {
+          const isMedia = card.item.type === "image" || card.item.type === "video";
+          const mediaUrl = card.item.type === "video" ? (card.item.thumbnail_url || card.item.image_url) : (card.item.imageUrl || card.item.image_url);
+          return (
+            <div
+              key={card.id}
+              data-card="true"
+              style={{
+                position: "absolute",
+                left: card.x, top: card.y,
+                width: card.width,
+                zIndex: activeId === card.id ? 500 : card.zBase,
+                transform: `rotate(${card.rotation}deg)`,
+                transition: "transform 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.4s ease",
+                boxShadow: isMedia ? "0 8px 48px rgba(0,0,0,0.6)" : "0 4px 28px rgba(0,0,0,0.45)",
+              }}
+              onMouseEnter={e => {
+                setActiveId(card.id);
+                const el = e.currentTarget as HTMLElement;
+                el.style.transform = "rotate(0deg) translateY(-14px) scale(1.04)";
+                el.style.boxShadow = "0 32px 90px rgba(0,0,0,0.8)";
+              }}
+              onMouseLeave={e => {
+                setActiveId(null);
+                const el = e.currentTarget as HTMLElement;
+                el.style.transform = `rotate(${card.rotation}deg)`;
+                el.style.boxShadow = isMedia ? "0 8px 48px rgba(0,0,0,0.6)" : "0 4px 28px rgba(0,0,0,0.45)";
+              }}
+              onClick={() => {
+                if (clickGuard.current) return;
+                onOpenItem(card.item);
+              }}
+            >
+              {isMedia && mediaUrl ? (
+                <div style={{ background: "#f5f2ed", padding: "10px 10px 44px", cursor: "pointer", position: "relative" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={mediaUrl} alt={card.item.caption || ""} draggable={false} style={{ width: "100%", display: "block", objectFit: "cover", aspectRatio: "4/3" }} />
+                  {/* Light leak */}
+                  <div style={{ position: "absolute", top: 10, left: 10, right: 10, bottom: 44, background: LIGHT_LEAKS[(card.zBase) % LIGHT_LEAKS.length], mixBlendMode: "screen", opacity: 0.3, pointerEvents: "none" }} />
+                  {/* Grain on photo */}
+                  <div style={{ position: "absolute", top: 10, left: 10, right: 10, bottom: 44, backgroundImage: GRAIN_SVG, backgroundSize: "100px", opacity: 0.06, pointerEvents: "none" }} />
+                  {card.item.type === "video" && (
+                    <div style={{ position: "absolute", top: 20, right: 20, background: "rgba(0,0,0,0.6)", padding: "2px 8px", fontFamily: "var(--font-mono)", fontSize: 7, color: "#fff", letterSpacing: "0.2em" }}>VIDEO</div>
+                  )}
+                  <div style={{ marginTop: 8, paddingLeft: 2 }}>
+                    {card.item.caption && <div style={{ fontFamily: "var(--font-space)", fontWeight: 700, fontSize: 10, color: "#1c1814", letterSpacing: "-0.01em", lineHeight: 1.3 }}>{card.item.caption}</div>}
+                    {card.item.poem && <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.18em", color: "rgba(184,92,56,0.6)", marginTop: 3 }}>— {card.item.poem}</div>}
+                  </div>
                 </div>
-              </div>
-            ) : card.kind === "poem" && card.poem ? (
-              <div style={{ background: "#1a1410", border: "1px solid rgba(184,92,56,0.18)", padding: "clamp(20px,3vw,28px) clamp(18px,2.5vw,24px)", cursor: "default" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.3em", color: rustDim, textTransform: "uppercase", marginBottom: 14 }}>verse</div>
-                <div style={{ fontFamily: "var(--font-space)", fontWeight: 700, fontSize: "clamp(14px,1.4vw,18px)", color: paper, lineHeight: 1.35, marginBottom: 8 }}>{card.poem.line}</div>
-                <div style={{ fontSize: "clamp(11px,1.1vw,14px)", color: "rgba(244,241,236,0.45)", lineHeight: 1.6, marginBottom: 14 }}>{card.poem.sub}</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.22em", color: rustDim }}>-- {card.poem.poem}</div>
-              </div>
-            ) : null}
-          </div>
-        ))}
+              ) : card.item.type === "quote" ? (
+                <div style={{ background: "#110f0d", border: "1px solid rgba(184,92,56,0.12)", padding: "clamp(20px,3vw,28px) clamp(16px,2.5vw,24px)", cursor: "pointer" }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.3em", color: rustDim, textTransform: "uppercase", marginBottom: 12 }}>verse</div>
+                  <div style={{ fontFamily: "var(--font-cormorant)", fontStyle: "italic", fontWeight: 500, fontSize: "clamp(14px,1.4vw,18px)", color: paper, lineHeight: 1.45, marginBottom: 14 }}>&ldquo;{card.item.text}&rdquo;</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 7, letterSpacing: "0.22em", color: rustDim }}>— {card.item.poem}</div>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-/* Floating Particles */
-const PARTICLE_DATA = Array.from({ length: 18 }, (_, i) => ({
-  w: (i * 7919 + 1) % 100 / 50 + 1, h: (i * 3571 + 7) % 100 / 50 + 1,
-  opacity: (i * 1231 + 3) % 100 / 333 + 0.1,
-  left: (i * 4567 + 5) % 100, top: (i * 9001 + 5) % 100,
-  dur: (i * 2341 + 13) % 12 + 8, delay: (i * 8123 + 17) % 6,
-}));
-
-function Particles() {
-  return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }} aria-hidden="true">
-      {PARTICLE_DATA.map((p, i) => (
-        <div key={i} style={{
-          position: "absolute", width: p.w + "px", height: p.h + "px",
-          background: `rgba(184,92,56,${p.opacity})`, borderRadius: "50%",
-          left: p.left + "%", top: p.top + "%",
-          animation: `particleDrift ${p.dur}s ease-in-out ${p.delay}s infinite`,
-        }} />
-      ))}
-    </div>
-  );
-}
-
-/* Page */
+/* ─── Page ─── */
 export default function GalleryPage() {
-  const [scrolled, setScrolled]       = useState(false);
   const [items, setItems]             = useState<GalleryItem[]>([]);
   const [overlayItem, setOverlayItem] = useState<GalleryItem | null>(null);
+  const [scrolled, setScrolled]       = useState(false);
+  const closeOverlay                  = useCallback(() => setOverlayItem(null), []);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 48);
@@ -476,18 +492,35 @@ export default function GalleryPage() {
   useEffect(() => {
     fetch("/api/gallery")
       .then(r => r.ok ? r.json() : [])
-      .then((data: Array<GalleryItem & { image_url?: string }>) => {
-        setItems(data.map(item => ({ ...item, imageUrl: item.image_url ?? item.imageUrl })));
+      .then((data: GalleryItem[]) => {
+        setItems(data.map(item => ({
+          ...item,
+          imageUrl: item.image_url ?? item.imageUrl,
+        })));
       })
       .catch(() => {});
   }, []);
 
-  const headRef = useFade(0);
-  const closeOverlay = useCallback(() => setOverlayItem(null), []);
+  const mediaItems = items.filter(it => (it.type === "image" || it.type === "video") && (it.imageUrl || it.image_url || it.video_url));
+  const quoteItems = items.filter(it => it.type === "quote" && it.text);
+
+  // Interleave quotes into media grid
+  const gridItems: GalleryItem[] = [];
+  let qIdx = 0;
+  mediaItems.forEach((item, i) => {
+    gridItems.push(item);
+    if ((i + 1) % 4 === 0 && qIdx < quoteItems.length) {
+      gridItems.push(quoteItems[qIdx++]);
+    }
+  });
+  while (qIdx < quoteItems.length) {
+    gridItems.push(quoteItems[qIdx++]);
+  }
+
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
 
   return (
-    <div style={{ background: paper, color: ink, minHeight: "100vh", fontFamily: "var(--font-space)", overflowX: "hidden" }}>
+    <div style={{ background: bg, color: paper, minHeight: "100vh", fontFamily: "var(--font-space)", overflowX: "hidden" }}>
       <style>{`
         @keyframes grainShift {
           0%{transform:translate(0,0)} 10%{transform:translate(-2%,-2%)} 20%{transform:translate(2%,1%)}
@@ -496,79 +529,122 @@ export default function GalleryPage() {
           90%{transform:translate(-1%,-1%)} 100%{transform:translate(0,0)}
         }
         @keyframes hintFade { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes particleDrift {
-          0%,100%{transform:translate(0,0) scale(1);opacity:0.7}
-          25%{transform:translate(-8px,-12px) scale(1.2);opacity:1}
-          50%{transform:translate(10px,-20px) scale(0.8);opacity:0.5}
-          75%{transform:translate(-5px,-8px) scale(1.1);opacity:0.9}
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @media(prefers-reduced-motion:reduce){*{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
         .gal-link:hover{color:${rust}!important}
+        .gal-cell { animation: fadeUp 0.6s ease both; }
       `}</style>
 
       {overlayItem && <PolaroidOverlay item={overlayItem} onClose={closeOverlay} />}
 
-      {/* Nav */}
+      {/* ─── Nav ─── */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        padding: "0 clamp(24px,6vw,80px)", height: 56,
+        padding: "0 clamp(16px,4vw,48px)", height: 52,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: scrolled ? "rgba(244,241,236,0.94)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
-        borderBottom: scrolled ? `1px solid ${border}` : "none",
-        transition: "background 0.35s",
+        background: scrolled ? "rgba(10,9,8,0.92)" : "transparent",
+        backdropFilter: scrolled ? "blur(16px)" : "none",
+        borderBottom: scrolled ? "1px solid rgba(244,241,236,0.06)" : "none",
+        transition: "background 0.35s, border 0.35s",
       }}>
-        <Link href="/poet" className="gal-link" style={{ ...mono, fontSize: 11, letterSpacing: "0.2em", color: dim, textDecoration: "none", transition: "color 0.2s" }}>back to POET</Link>
-        <span style={{ ...mono, fontSize: 10, letterSpacing: "0.25em", color: rustDim }}>GALLERY</span>
+        <Link href="/poet" className="gal-link" style={{ ...mono, fontSize: 10, letterSpacing: "0.2em", color: dim, textDecoration: "none", transition: "color 0.2s" }}>← POET</Link>
+        <span style={{ ...mono, fontSize: 9, letterSpacing: "0.3em", color: rustDim }}>GALLERY</span>
       </nav>
 
-      {/* Header */}
+      {/* ─── Hero / Title ─── */}
       <div style={{
-        paddingTop: 120, paddingBottom: 56,
-        paddingLeft: "clamp(24px,8vw,120px)", paddingRight: "clamp(24px,8vw,120px)",
-        borderBottom: `1px solid ${border}`, position: "relative",
+        position: "relative", paddingTop: 100, paddingBottom: 32,
+        paddingLeft: "clamp(16px,5vw,80px)", paddingRight: "clamp(16px,5vw,80px)",
       }}>
-        <Particles />
-        <div ref={headRef} style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ ...mono, fontSize: 10, letterSpacing: "0.3em", color: rustDim, marginBottom: 16, textTransform: "uppercase" }}>{"// Gallery"}</div>
-          <h1 style={{ fontWeight: 700, fontSize: "clamp(36px,7vw,96px)", letterSpacing: "-0.03em", lineHeight: 1.0, color: ink, marginBottom: 16 }}>
+        {/* Ambient grain */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.035,
+          backgroundImage: GRAIN_SVG, backgroundSize: "180px",
+          animation: "grainShift 0.12s steps(1) infinite",
+        }} />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div style={{ ...mono, fontSize: 9, letterSpacing: "0.35em", color: rustDim, marginBottom: 14, textTransform: "uppercase" }}>gallery</div>
+          <h1 style={{ fontWeight: 700, fontSize: "clamp(40px,9vw,110px)", letterSpacing: "-0.04em", lineHeight: 0.92, color: paper, marginBottom: 14 }}>
             Visual<br />Fragments
           </h1>
-          <p style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: dim, maxWidth: 400 }}>
-            Poem lines as visual objects. Atmosphere, imagery, and words that define the Eclipse.
+          <p style={{ ...mono, fontSize: 9, letterSpacing: "0.18em", color: dim, maxWidth: 380 }}>
+            Images, verses, and atmosphere from the world of Whispers of the Eclipse.
           </p>
         </div>
       </div>
 
-      {/* Film Reel */}
-      <FilmReel items={items} onImageClick={setOverlayItem} />
-
-      {/* Canvas label */}
+      {/* ─── Dense Masonry Grid (rodeo.film inspired) ─── */}
       <div style={{
-        padding: "clamp(40px,6vw,72px) clamp(24px,8vw,120px) 0",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: "#0d0b09",
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gridAutoRows: "clamp(140px, 18vw, 240px)",
+        gap: 3,
+        padding: "0 3px",
+        position: "relative",
       }}>
-        <div style={{ ...mono, fontSize: 10, letterSpacing: "0.3em", color: "rgba(184,92,56,0.4)", textTransform: "uppercase" }}>
-          -- Fragments and Verses
-        </div>
-        <div style={{ ...mono, fontSize: 9, letterSpacing: "0.25em", color: "rgba(244,241,236,0.18)", textTransform: "uppercase" }}>
-          {items.length} fragments
-        </div>
+        {/* Overall grain layer */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 15, opacity: 0.03,
+          backgroundImage: GRAIN_SVG, backgroundSize: "200px",
+          animation: "grainShift 0.12s steps(1) infinite",
+        }} />
+
+        {gridItems.map((item, i) => {
+          const pattern = GRID_PATTERNS[i % GRID_PATTERNS.length];
+          return (
+            <div
+              key={item.id}
+              className="gal-cell"
+              style={{
+                gridColumn: pattern.col,
+                gridRow: pattern.row,
+                animationDelay: `${i * 60}ms`,
+                position: "relative",
+              }}
+            >
+              {item.type === "quote" ? (
+                <QuoteCell item={item} onClick={() => setOverlayItem(item)} />
+              ) : (
+                <MediaCell
+                  item={item}
+                  lightLeakIndex={i}
+                  onClick={() => setOverlayItem(item)}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Drag Canvas */}
-      <DragCanvas items={items} onOpenItem={setOverlayItem} />
+      {/* ─── Drag Canvas Section ─── */}
+      {items.length > 0 && (
+        <>
+          <div style={{
+            padding: "clamp(32px,5vw,56px) clamp(16px,5vw,80px) 0",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <div style={{ ...mono, fontSize: 9, letterSpacing: "0.3em", color: rustDim, textTransform: "uppercase" }}>
+              — Scattered Fragments
+            </div>
+            <div style={{ ...mono, fontSize: 8, letterSpacing: "0.25em", color: "rgba(244,241,236,0.15)", textTransform: "uppercase" }}>
+              {items.length} pieces
+            </div>
+          </div>
+          <DragCanvas items={items} onOpenItem={setOverlayItem} />
+        </>
+      )}
 
-      {/* Footer */}
+      {/* ─── Footer ─── */}
       <div style={{
-        padding: "28px clamp(24px,8vw,120px)",
-        borderTop: `1px solid ${border}`,
+        padding: "24px clamp(16px,5vw,80px)",
+        borderTop: "1px solid rgba(244,241,236,0.06)",
         display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12,
-        background: paper,
       }}>
-        <span style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint }}>ELIA GHAZAL - POET</span>
-        <Link href="/poet" className="gal-link" style={{ ...mono, fontSize: 10, letterSpacing: "0.15em", color: faint, textDecoration: "none", transition: "color 0.2s" }}>Back to Poet</Link>
+        <span style={{ ...mono, fontSize: 9, letterSpacing: "0.18em", color: "rgba(244,241,236,0.12)" }}>ELIA GHAZAL — GALLERY</span>
+        <Link href="/poet" className="gal-link" style={{ ...mono, fontSize: 9, letterSpacing: "0.15em", color: "rgba(244,241,236,0.12)", textDecoration: "none", transition: "color 0.2s" }}>Back to Poet</Link>
       </div>
     </div>
   );

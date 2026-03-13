@@ -35,10 +35,12 @@ interface Post {
 
 interface GalleryItem {
   id: string;
-  type: "image" | "quote";
+  type: "image" | "video" | "quote";
   text?: string;
   poem?: string;
   image_url?: string;
+  video_url?: string;
+  thumbnail_url?: string;
   caption?: string;
   rotation?: number;
   aspect_ratio?: "original" | "1:1" | "16:9" | "3:4" | "21:9";
@@ -104,9 +106,13 @@ export default function AdminPage() {
   const [postForm, setPostForm]         = useState<Omit<Post, "id">>({ title: "", date: nowDate(), tag: "Essay", excerpt: "", content: "", read_time: "5 min", published: false, category: "blog" });
 
   const [gallery, setGallery]           = useState<GalleryItem[]>([]);
-  const [galForm, setGalForm]           = useState({ type: "quote" as "image" | "quote", text: "", poem: "", caption: "", aspect_ratio: "1:1" as "original" | "1:1" | "16:9" | "3:4" | "21:9" });
+  const [galForm, setGalForm]           = useState({ type: "quote" as "image" | "video" | "quote", text: "", poem: "", caption: "", aspect_ratio: "1:1" as "original" | "1:1" | "16:9" | "3:4" | "21:9" });
   const [imgFile, setImgFile]           = useState<File | null>(null);
   const [imgPreview, setImgPreview]     = useState<string | null>(null);
+  const [videoFile, setVideoFile]       = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [compressing, setCompressing]   = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState(0);
   const [uploading, setUploading]       = useState(false);
 
   const [labs, setLabs]                 = useState<LabExperiment[]>([]);
@@ -367,25 +373,155 @@ export default function AdminPage() {
     reader.onload = ev => setImgPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
+  const handleVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const url = URL.createObjectURL(file);
+    setVideoPreview(url);
+    // Try browser-based compression for videos > 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      setCompressing(true);
+      setCompressionProgress(0);
+      try {
+        const compressed = await compressVideo(file, (p) => setCompressionProgress(p));
+        setVideoFile(compressed);
+        showToast(`Compressed: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(compressed.size / 1024 / 1024).toFixed(1)}MB`);
+      } catch {
+        showToast("Compression failed, using original", false);
+        setVideoFile(file);
+      }
+      setCompressing(false);
+    } else {
+      setVideoFile(file);
+    }
+  };
+  const compressVideo = (file: File, onProgress: (p: number) => void): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      video.muted = true;
+      video.src = URL.createObjectURL(file);
+      video.onloadedmetadata = () => {
+        // Scale down resolution for compression
+        const maxDim = 1280;
+        let w = video.videoWidth;
+        let h = video.videoHeight;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        const stream = canvas.captureStream(30);
+        // Try to get audio track
+        try {
+          const audioCtx = new AudioContext();
+          const source = audioCtx.createMediaElementSource(video);
+          const dest = audioCtx.createMediaStreamDestination();
+          source.connect(dest);
+          source.connect(audioCtx.destination);
+          dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+        } catch { /* no audio track is fine */ }
+        const recorder = new MediaRecorder(stream, {
+          mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" :
+                    MediaRecorder.isTypeSupported("video/webm;codecs=vp8") ? "video/webm;codecs=vp8" : "video/webm",
+          videoBitsPerSecond: 2_500_000,
+        });
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: recorder.mimeType });
+          const ext = recorder.mimeType.includes("webm") ? "webm" : "mp4";
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, `.${ext}`), { type: recorder.mimeType }));
+          URL.revokeObjectURL(video.src);
+        };
+        recorder.onerror = () => reject(new Error("Recording failed"));
+        recorder.start();
+        video.currentTime = 0;
+        video.play();
+        const duration = video.duration;
+        const drawFrame = () => {
+          if (video.ended || video.paused) {
+            recorder.stop();
+            return;
+          }
+          ctx.drawImage(video, 0, 0, w, h);
+          onProgress(Math.min(99, Math.round((video.currentTime / duration) * 100)));
+          requestAnimationFrame(drawFrame);
+        };
+        drawFrame();
+        video.onended = () => {
+          onProgress(100);
+          recorder.stop();
+        };
+      };
+      video.onerror = () => reject(new Error("Failed to load video"));
+    });
+  };
+  const generateThumbnail = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      video.muted = true;
+      video.src = URL.createObjectURL(file);
+      video.onloadeddata = () => {
+        video.currentTime = Math.min(1, video.duration / 4);
+      };
+      video.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.min(video.videoWidth, 640);
+        canvas.height = Math.round(canvas.width * (video.videoHeight / video.videoWidth));
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          URL.revokeObjectURL(video.src);
+          if (blob) resolve(new File([blob], "thumb_" + file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+          else reject(new Error("Failed to create thumbnail"));
+        }, "image/jpeg", 0.8);
+      };
+      video.onerror = () => reject(new Error("Failed to load video for thumbnail"));
+    });
+  };
   const saveGalleryItem = async () => {
     if (galForm.type === "quote" && !galForm.text.trim()) { showToast("Quote text required", false); return; }
     if (galForm.type === "image" && !imgFile) { showToast("Please select an image", false); return; }
+    if (galForm.type === "video" && !videoFile) { showToast("Please select a video", false); return; }
     setUploading(true);
     try {
       let imageUrl: string | undefined;
+      let videoUrl: string | undefined;
+      let thumbnailUrl: string | undefined;
       if (galForm.type === "image" && imgFile) {
         const form = new FormData();
         form.append("file", imgFile);
         const uploadRes = await fetch("/api/upload", { method: "POST", headers: { "Authorization": password }, body: form });
-        if (!uploadRes.ok) { showToast("Image upload failed", false); return; }
+        if (!uploadRes.ok) { const err = await uploadRes.json().catch(() => ({})); showToast(`Image upload failed: ${err.error || "Unknown error"}`, false); return; }
         const { url } = await uploadRes.json();
         imageUrl = url;
+      }
+      if (galForm.type === "video" && videoFile) {
+        // Upload video
+        const form = new FormData();
+        form.append("file", videoFile);
+        const uploadRes = await fetch("/api/upload", { method: "POST", headers: { "Authorization": password }, body: form });
+        if (!uploadRes.ok) { const err = await uploadRes.json().catch(() => ({})); showToast(`Video upload failed: ${err.error || "Unknown error"}`, false); return; }
+        const { url } = await uploadRes.json();
+        videoUrl = url;
+        // Generate and upload thumbnail
+        try {
+          const thumb = await generateThumbnail(videoFile);
+          const thumbForm = new FormData();
+          thumbForm.append("file", thumb);
+          const thumbRes = await fetch("/api/upload", { method: "POST", headers: { "Authorization": password }, body: thumbForm });
+          if (thumbRes.ok) { const { url: tUrl } = await thumbRes.json(); thumbnailUrl = tUrl; }
+        } catch { /* thumbnail generation failed, that's ok */ }
       }
       const item = {
         id: uid(), type: galForm.type,
         rotation: parseFloat(((Math.random() - 0.5) * 5).toFixed(2)),
         ...(galForm.type === "quote" ? { text: galForm.text, poem: galForm.poem || undefined } : {}),
         ...(galForm.type === "image" ? { image_url: imageUrl, caption: galForm.caption || undefined, poem: galForm.poem || undefined, aspect_ratio: galForm.aspect_ratio } : {}),
+        ...(galForm.type === "video" ? { video_url: videoUrl, thumbnail_url: thumbnailUrl, image_url: thumbnailUrl, caption: galForm.caption || undefined, poem: galForm.poem || undefined, aspect_ratio: galForm.aspect_ratio } : {}),
       };
       const res = await apiFetch("/api/gallery", { method: "POST", auth: password, body: JSON.stringify(item) });
       if (res.ok) {
@@ -393,6 +529,7 @@ export default function AdminPage() {
         setGallery(prev => [created, ...prev]);
         setGalForm({ type: "quote", text: "", poem: "", caption: "", aspect_ratio: "1:1" });
         setImgFile(null); setImgPreview(null);
+        setVideoFile(null); setVideoPreview(null);
         if (fileRef.current) fileRef.current.value = "";
         showToast("Added to gallery");
       } else showToast("Failed to save", false);
@@ -782,7 +919,12 @@ export default function AdminPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px,1fr))", gap: 2 }}>
                 {gallery.map(item => (
                   <div key={item.id} style={{ background: card, border: `1px solid ${border}`, padding: 12 }}>
-                    {item.type === "image" && item.image_url
+                    {item.type === "video" && item.video_url
+                      ? <div style={{ position: "relative" }}>
+                          <video src={item.video_url} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block", marginBottom: 8 }} muted playsInline preload="metadata" />
+                          <div style={{ position: "absolute", top: 4, left: 4, background: "rgba(0,0,0,0.7)", padding: "2px 6px", fontFamily: "var(--font-mono)", fontSize: 8, color: "#fff", letterSpacing: "0.1em" }}>VIDEO</div>
+                        </div>
+                      : item.type === "image" && item.image_url
                       ? <img src={item.image_url} alt="" style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block", marginBottom: 8 }} />
                       : <div style={{ width: "100%", aspectRatio: "1/1", background: surface, display: "flex", alignItems: "center", justifyContent: "center", padding: 10, marginBottom: 8 }}><span style={{ fontSize: 12, color: dim, fontStyle: "italic", textAlign: "center", lineHeight: 1.5 }}>{`"${item.text?.slice(0, 60)}…"`}</span></div>
                     }
@@ -794,9 +936,9 @@ export default function AdminPage() {
             </div>
             <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px", position: "sticky", top: 24 }}>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 20 }}>+ ADD ITEM</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, marginBottom: 16 }}>
-                {(["quote", "image"] as const).map(t => (
-                  <button key={t} onClick={() => setGalForm(f => ({ ...f, type: t }))} style={{ padding: "8px", background: galForm.type === t ? rust : surface, border: `1px solid ${border}`, color: galForm.type === t ? "#fff" : dim, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase" }}>{t}</button>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, marginBottom: 16 }}>
+                {(["quote", "image", "video"] as const).map(t => (
+                  <button key={t} onClick={() => { setGalForm(f => ({ ...f, type: t })); setImgFile(null); setImgPreview(null); setVideoFile(null); setVideoPreview(null); }} style={{ padding: "8px", background: galForm.type === t ? rust : surface, border: `1px solid ${border}`, color: galForm.type === t ? "#fff" : dim, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase" }}>{t}</button>
                 ))}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -805,7 +947,7 @@ export default function AdminPage() {
                     <div><label style={labelStyle}>Quote text *</label><textarea value={galForm.text} onChange={e => setGalForm(f => ({ ...f, text: e.target.value }))} rows={4} placeholder="Enter a poem line…" style={{ ...inputStyle, resize: "vertical", lineHeight: 1.65 }} /></div>
                     <div><label style={labelStyle}>Source poem</label><input value={galForm.poem} onChange={e => setGalForm(f => ({ ...f, poem: e.target.value }))} placeholder="e.g. Invisible Thread" style={inputStyle} /></div>
                   </>
-                ) : (
+                ) : galForm.type === "image" ? (
                   <>
                     <div><label style={labelStyle}>Image *</label><input ref={fileRef} type="file" accept="image/*" onChange={handleImageFile} style={{ ...inputStyle, padding: "8px 12px", cursor: "pointer" }} /></div>
                     {imgPreview && <img src={imgPreview} alt="" style={{ width: "100%", aspectRatio: galForm.aspect_ratio === "16:9" ? "16/9" : galForm.aspect_ratio === "3:4" ? "3/4" : galForm.aspect_ratio === "21:9" ? "21/9" : galForm.aspect_ratio === "original" ? "auto" : "1/1", objectFit: "cover", border: `1px solid ${border}` }} />}
@@ -821,8 +963,35 @@ export default function AdminPage() {
                     <div><label style={labelStyle}>Caption</label><input value={galForm.caption} onChange={e => setGalForm(f => ({ ...f, caption: e.target.value }))} placeholder="Optional caption…" style={inputStyle} /></div>
                     <div><label style={labelStyle}>Source poem</label><input value={galForm.poem} onChange={e => setGalForm(f => ({ ...f, poem: e.target.value }))} placeholder="e.g. Oh Sea" style={inputStyle} /></div>
                   </>
+                ) : (
+                  <>
+                    <div><label style={labelStyle}>Video * (mp4, webm, mov)</label><input ref={fileRef} type="file" accept="video/*" onChange={handleVideoFile} style={{ ...inputStyle, padding: "8px 12px", cursor: "pointer" }} /></div>
+                    {compressing && (
+                      <div style={{ padding: 12, background: surface, border: `1px solid ${border}` }}>
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: rustDim, marginBottom: 8, letterSpacing: "0.15em" }}>COMPRESSING… {compressionProgress}%</div>
+                        <div style={{ width: "100%", height: 4, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                          <div style={{ width: `${compressionProgress}%`, height: "100%", background: rust, transition: "width 0.3s" }} />
+                        </div>
+                      </div>
+                    )}
+                    {videoPreview && !compressing && (
+                      <video src={videoPreview} style={{ width: "100%", aspectRatio: galForm.aspect_ratio === "16:9" ? "16/9" : galForm.aspect_ratio === "3:4" ? "3/4" : galForm.aspect_ratio === "21:9" ? "21/9" : galForm.aspect_ratio === "original" ? "auto" : "1/1", objectFit: "cover", border: `1px solid ${border}` }} controls muted playsInline />
+                    )}
+                    {videoFile && <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: dim, letterSpacing: "0.1em" }}>Size: {(videoFile.size / 1024 / 1024).toFixed(1)}MB</div>}
+                    <div>
+                      <label style={labelStyle}>Aspect Ratio</label>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 4 }}>
+                        {([["original","Auto"],["1:1","1:1"],["16:9","16:9"],["3:4","3:4"],["21:9","21:9"]] as const).map(([val, label]) => (
+                          <button key={val} type="button" onClick={() => setGalForm(f => ({ ...f, aspect_ratio: val }))}
+                            style={{ padding: "6px 4px", background: galForm.aspect_ratio === val ? rust : surface, border: `1px solid ${galForm.aspect_ratio === val ? rust : border}`, color: galForm.aspect_ratio === val ? "#fff" : dim, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em" }}>{label}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div><label style={labelStyle}>Caption</label><input value={galForm.caption} onChange={e => setGalForm(f => ({ ...f, caption: e.target.value }))} placeholder="Optional caption…" style={inputStyle} /></div>
+                    <div><label style={labelStyle}>Source poem</label><input value={galForm.poem} onChange={e => setGalForm(f => ({ ...f, poem: e.target.value }))} placeholder="e.g. Oh Sea" style={inputStyle} /></div>
+                  </>
                 )}
-                <button onClick={saveGalleryItem} disabled={uploading} style={{ ...btnStyle(), width: "100%", marginTop: 4, opacity: uploading ? 0.6 : 1 }}>{uploading ? "Uploading…" : "Add to Gallery"}</button>
+                <button onClick={saveGalleryItem} disabled={uploading || compressing} style={{ ...btnStyle(), width: "100%", marginTop: 4, opacity: (uploading || compressing) ? 0.6 : 1 }}>{uploading ? "Uploading…" : compressing ? "Compressing…" : "Add to Gallery"}</button>
               </div>
             </div>
           </div>

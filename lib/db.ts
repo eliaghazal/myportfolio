@@ -68,10 +68,12 @@ export async function deletePost(id: string): Promise<void> {
 
 export interface GalleryItem {
   id: string;
-  type: "image" | "quote";
+  type: "image" | "video" | "quote";
   text?: string;
   poem?: string;
   image_url?: string;
+  video_url?: string;
+  thumbnail_url?: string;
   caption?: string;
   rotation?: number;
   aspect_ratio?: "original" | "1:1" | "16:9" | "3:4" | "21:9";
@@ -85,8 +87,8 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
 
 export async function createGalleryItem(item: Omit<GalleryItem, "created_at">): Promise<GalleryItem> {
   const { rows } = await sql`
-    INSERT INTO gallery_items (id, type, text, poem, image_url, caption, rotation, aspect_ratio)
-    VALUES (${item.id}, ${item.type}, ${item.text ?? null}, ${item.poem ?? null}, ${item.image_url ?? null}, ${item.caption ?? null}, ${item.rotation ?? null}, ${item.aspect_ratio ?? "1:1"})
+    INSERT INTO gallery_items (id, type, text, poem, image_url, video_url, thumbnail_url, caption, rotation, aspect_ratio)
+    VALUES (${item.id}, ${item.type}, ${item.text ?? null}, ${item.poem ?? null}, ${item.image_url ?? null}, ${item.video_url ?? null}, ${item.thumbnail_url ?? null}, ${item.caption ?? null}, ${item.rotation ?? null}, ${item.aspect_ratio ?? "1:1"})
     RETURNING *
   `;
   return rows[0] as GalleryItem;

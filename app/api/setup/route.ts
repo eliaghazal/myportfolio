@@ -55,7 +55,12 @@ export async function GET() {
 
     // Add new columns gracefully
     try { await sql`ALTER TABLE gallery_items ADD COLUMN IF NOT EXISTS aspect_ratio TEXT DEFAULT '1:1'`; } catch { /* already exists */ }
+    try { await sql`ALTER TABLE gallery_items ADD COLUMN IF NOT EXISTS video_url TEXT`; } catch { /* already exists */ }
+    try { await sql`ALTER TABLE gallery_items ADD COLUMN IF NOT EXISTS thumbnail_url TEXT`; } catch { /* already exists */ }
     try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'blog'`; } catch { /* already exists */ }
+    // Update type constraint to allow video
+    try { await sql`ALTER TABLE gallery_items DROP CONSTRAINT IF EXISTS gallery_items_type_check`; } catch { /* */ }
+    try { await sql`ALTER TABLE gallery_items ADD CONSTRAINT gallery_items_type_check CHECK (type IN ('image', 'video', 'quote'))`; } catch { /* */ }
 
     const seedResult = await runSeed();
 
