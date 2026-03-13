@@ -9,7 +9,8 @@ function isAuthorized(req: NextRequest): boolean {
 export async function GET(req: NextRequest) {
   try {
     const all = req.nextUrl.searchParams.get("all") === "true";
-    const posts = await getPosts(all);
+    const category = req.nextUrl.searchParams.get("category") ?? undefined;
+    const posts = await getPosts(all, category);
     return NextResponse.json(posts);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

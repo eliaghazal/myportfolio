@@ -30,6 +30,7 @@ interface Post {
   content: string;
   read_time: string;
   published: boolean;
+  category?: string;
 }
 
 interface GalleryItem {
@@ -40,6 +41,7 @@ interface GalleryItem {
   image_url?: string;
   caption?: string;
   rotation?: number;
+  aspect_ratio?: "original" | "1:1" | "16:9" | "3:4" | "21:9";
 }
 
 interface LabExperiment {
@@ -95,14 +97,14 @@ export default function AdminPage() {
   const [passErr, setPassErr]           = useState(false);
   const [authLoading, setAuthLoading]   = useState(false);
   const [password, setPassword]         = useState("");
-  const [tab, setTab]                   = useState<"blog" | "gallery" | "lab" | "projects" | "skills" | "certs" | "awards" | "poems" | "settings">("blog");
+  const [tab, setTab]                   = useState<"blog" | "gallery" | "lab" | "projects" | "skills" | "certs" | "awards" | "poems" | "content" | "settings">("blog");
 
   const [posts, setPosts]               = useState<Post[]>([]);
   const [editPost, setEditPost]         = useState<Post | null>(null);
-  const [postForm, setPostForm]         = useState<Omit<Post, "id">>({ title: "", date: nowDate(), tag: "Essay", excerpt: "", content: "", read_time: "5 min", published: false });
+  const [postForm, setPostForm]         = useState<Omit<Post, "id">>({ title: "", date: nowDate(), tag: "Essay", excerpt: "", content: "", read_time: "5 min", published: false, category: "blog" });
 
   const [gallery, setGallery]           = useState<GalleryItem[]>([]);
-  const [galForm, setGalForm]           = useState({ type: "quote" as "image" | "quote", text: "", poem: "", caption: "" });
+  const [galForm, setGalForm]           = useState({ type: "quote" as "image" | "quote", text: "", poem: "", caption: "", aspect_ratio: "1:1" as "original" | "1:1" | "16:9" | "3:4" | "21:9" });
   const [imgFile, setImgFile]           = useState<File | null>(null);
   const [imgPreview, setImgPreview]     = useState<string | null>(null);
   const [uploading, setUploading]       = useState(false);
@@ -145,6 +147,23 @@ export default function AdminPage() {
 
   const [heroLinesData, setHeroLinesData] = useState<string[]>([]);
   const [heroLinesText, setHeroLinesText] = useState("");
+
+  /* ── Content settings state ── */
+  const [engAboutHeading, setEngAboutHeading]   = useState("I don't wait for the\nright moment.\nI build it.");
+  const [engAboutBody, setEngAboutBody]         = useState("From a bedroom in Lebanon to published poet, award-winning developer, and IoT architect — I've learned that pressure doesn't break you, it compiles you.\n---\nI'm studying Computer Science at AUST (graduating June 2026), building CrashLens and MysteryPersona while carrying a full course load — and writing poetry that ends up on Amazon.\n---\nThat's not luck. That's obsession.");
+  const [engAboutManifesto, setEngAboutManifesto] = useState("The impossible, made.");
+  const [engTerminalAbout, setEngTerminalAbout] = useState("  Name:       Elia Ghazal\n  Location:   Lebanon → the world\n  Role:       Engineer / Poet / Builder\n  School:     AUST Computer Science (2026)\n  Standing:   Honor's List\n  Motto:      The impossible, made.");
+  const [engBeyondCode, setEngBeyondCode]       = useState<Array<{t:string;d:string}>>([
+    { t: "AI Workshop", d: "Attended regional AI/ML workshop — explored transformer architectures and edge deployment." },
+    { t: "Environmental Seminar", d: "Participated in AUST environmental sustainability seminar series." },
+    { t: "Whispers of the Eclipse", d: "Published debut poetry collection at 19 — 27 poems, Ukiyoto Publishing, 2024." },
+  ]);
+  const [engBeyondCodeText, setEngBeyondCodeText] = useState("");
+  const [poetAboutHeading, setPoetAboutHeading] = useState("Writing was\nnever a choice.\nIt was survival.");
+  const [poetAboutBody, setPoetAboutBody]       = useState("Writing has always been my sanctuary — a guiding light through the darkest times. Without it, I would never have found the happiness that now colors my world.\n---\nWhispers of the Eclipse is born from the raw and unfiltered experiences of my life. A testament to the power of words to heal, to connect, and to transform.\n---\nI have always imagined my life as a sailing boat, bravely navigating the hazardous sea. Even when life gives you the worst waves — keep your boat afloat and sail away.");
+  const [poetBookTitle, setPoetBookTitle]       = useState("Whispers of the Eclipse");
+  const [poetBookDescription, setPoetBookDescription] = useState("A collection written across ages 15–19 — raw, unfiltered, and honest. Twenty-seven poems tracing love, loss, identity, resilience, and what it means to grow up in Lebanon.");
+
 
   const [cvUrl, setCvUrl]               = useState<string | null>(null);
   const [cvFile, setCvFile]             = useState<File | null>(null);
@@ -203,12 +222,16 @@ export default function AdminPage() {
     const keys = [
       "featured_projects","other_projects","skills","certs","awards","stats",
       "poems","hero_lines","cv_url","social_email","social_linkedin","social_github","book_link",
+      "engineer_about_heading","engineer_about_body","engineer_about_manifesto",
+      "engineer_terminal_about","engineer_beyond_code",
+      "poet_about_heading","poet_about_body","poet_book_title","poet_book_description",
     ];
     try {
       const results = await Promise.all(
         keys.map(k => apiFetch(`/api/admin/settings?key=${k}`, { auth }).then(r => r.ok ? r.json() : null).catch(() => null))
       );
-      const [fp, op, sk, ce, aw, st, po, hl, cv, em, li, gh, bl] = results;
+      const [fp, op, sk, ce, aw, st, po, hl, cv, em, li, gh, bl,
+        eah, eab, eam, eta, ebc, pah, pab, pbt, pbd] = results;
       setFeaturedProjs(fp?.value ? tryParse(fp.value, DEFAULT_FEATURED) : DEFAULT_FEATURED);
       setOtherProjs(op?.value ? tryParse(op.value, DEFAULT_OTHER_PROJECTS) : DEFAULT_OTHER_PROJECTS);
       setSkillsData(sk?.value ? tryParse(sk.value, DEFAULT_SKILLS) : DEFAULT_SKILLS);
@@ -224,7 +247,23 @@ export default function AdminPage() {
       if (li?.value) setSettingLinkedIn(li.value);
       if (gh?.value) setSettingGitHub(gh.value);
       if (bl?.value) setSettingBookLink(bl.value);
+      if (eah?.value) setEngAboutHeading(tryParse(eah.value, engAboutHeading));
+      if (eab?.value) setEngAboutBody(tryParse(eab.value, engAboutBody));
+      if (eam?.value) setEngAboutManifesto(tryParse(eam.value, engAboutManifesto));
+      if (eta?.value) setEngTerminalAbout(tryParse(eta.value, engTerminalAbout));
+      if (ebc?.value) {
+        const bcArr = tryParse<Array<{t:string;d:string}>>(ebc.value, engBeyondCode);
+        setEngBeyondCode(bcArr);
+        setEngBeyondCodeText(bcArr.map(x => `${x.t}|${x.d}`).join("\n"));
+      } else {
+        setEngBeyondCodeText(engBeyondCode.map(x => `${x.t}|${x.d}`).join("\n"));
+      }
+      if (pah?.value) setPoetAboutHeading(tryParse(pah.value, poetAboutHeading));
+      if (pab?.value) setPoetAboutBody(tryParse(pab.value, poetAboutBody));
+      if (pbt?.value) setPoetBookTitle(tryParse(pbt.value, poetBookTitle));
+      if (pbd?.value) setPoetBookDescription(tryParse(pbd.value, poetBookDescription));
     } catch { /* */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogin = async () => {
@@ -278,11 +317,11 @@ export default function AdminPage() {
   /* ── Blog handlers ── */
   const resetPostForm = () => {
     setEditPost(null);
-    setPostForm({ title: "", date: nowDate(), tag: "Essay", excerpt: "", content: "", read_time: "5 min", published: false });
+    setPostForm({ title: "", date: nowDate(), tag: "Essay", excerpt: "", content: "", read_time: "5 min", published: false, category: "blog" });
   };
   const loadPostForEdit = (p: Post) => {
     setEditPost(p);
-    setPostForm({ title: p.title, date: p.date, tag: p.tag, excerpt: p.excerpt, content: p.content, read_time: p.read_time, published: p.published });
+    setPostForm({ title: p.title, date: p.date, tag: p.tag, excerpt: p.excerpt, content: p.content, read_time: p.read_time, published: p.published, category: p.category ?? "blog" });
   };
   const savePost = async () => {
     if (!postForm.title.trim()) { showToast("Title is required", false); return; }
@@ -346,13 +385,13 @@ export default function AdminPage() {
         id: uid(), type: galForm.type,
         rotation: parseFloat(((Math.random() - 0.5) * 5).toFixed(2)),
         ...(galForm.type === "quote" ? { text: galForm.text, poem: galForm.poem || undefined } : {}),
-        ...(galForm.type === "image" ? { image_url: imageUrl, caption: galForm.caption || undefined, poem: galForm.poem || undefined } : {}),
+        ...(galForm.type === "image" ? { image_url: imageUrl, caption: galForm.caption || undefined, poem: galForm.poem || undefined, aspect_ratio: galForm.aspect_ratio } : {}),
       };
       const res = await apiFetch("/api/gallery", { method: "POST", auth: password, body: JSON.stringify(item) });
       if (res.ok) {
         const created = await res.json();
         setGallery(prev => [created, ...prev]);
-        setGalForm({ type: "quote", text: "", poem: "", caption: "" });
+        setGalForm({ type: "quote", text: "", poem: "", caption: "", aspect_ratio: "1:1" });
         setImgFile(null); setImgPreview(null);
         if (fileRef.current) fileRef.current.value = "";
         showToast("Added to gallery");
@@ -563,6 +602,47 @@ export default function AdminPage() {
     else showToast("Failed", false);
   };
 
+  /* ── Content settings handlers ── */
+  const saveEngAbout = async () => {
+    const ok = await Promise.all([
+      saveContentSetting("engineer_about_heading", engAboutHeading),
+      saveContentSetting("engineer_about_body", engAboutBody),
+      saveContentSetting("engineer_about_manifesto", engAboutManifesto),
+    ]);
+    if (ok.every(Boolean)) showToast("Engineer About saved");
+    else showToast("Failed to save", false);
+  };
+  const saveEngTerminal = async () => {
+    if (await saveContentSetting("engineer_terminal_about", engTerminalAbout)) showToast("Terminal About saved");
+    else showToast("Failed", false);
+  };
+  const saveEngBeyondCode = async () => {
+    const items = engBeyondCodeText.split("\n").map(line => {
+      const sep = line.indexOf("|");
+      if (sep === -1) return null;
+      return { t: line.slice(0, sep).trim(), d: line.slice(sep + 1).trim() };
+    }).filter(Boolean) as Array<{t:string;d:string}>;
+    if (await saveContentSetting("engineer_beyond_code", items)) { setEngBeyondCode(items); showToast("Beyond Code saved"); }
+    else showToast("Failed", false);
+  };
+  const savePoetAbout = async () => {
+    const ok = await Promise.all([
+      saveContentSetting("poet_about_heading", poetAboutHeading),
+      saveContentSetting("poet_about_body", poetAboutBody),
+    ]);
+    if (ok.every(Boolean)) showToast("Poet About saved");
+    else showToast("Failed to save", false);
+  };
+  const savePoetBook = async () => {
+    const ok = await Promise.all([
+      saveContentSetting("poet_book_title", poetBookTitle),
+      saveContentSetting("poet_book_description", poetBookDescription),
+      saveContentSetting("book_link", settingBookLink),
+    ]);
+    if (ok.every(Boolean)) showToast("Book info saved");
+    else showToast("Failed", false);
+  };
+
   /* ── Settings handlers ── */
   const handleCvUpload = async () => {
     if (!cvFile) { showToast("Select a PDF first", false); return; }
@@ -612,7 +692,7 @@ export default function AdminPage() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.3em", color: rustDim }}>ELIA · ADMIN</span>
           <span style={{ width: 1, height: 16, background: border }} />
           <div style={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-            {(["blog", "gallery", "lab", "projects", "skills", "certs", "awards", "poems", "settings"] as const).map(t => (
+            {(["blog", "gallery", "lab", "projects", "skills", "certs", "awards", "poems", "content", "settings"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{ padding: "6px 14px", background: tab === t ? rust : "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.18em", color: tab === t ? "#fff" : dim, textTransform: "uppercase", transition: "all 0.2s" }}>{t}</button>
             ))}
           </div>
@@ -652,6 +732,7 @@ export default function AdminPage() {
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
                         <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, padding: "1px 7px", background: "rgba(196,103,62,0.15)", color: rust, border: "1px solid rgba(196,103,62,0.2)" }}>{p.tag}</span>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, padding: "1px 7px", background: p.category === "devlog" ? "rgba(57,255,20,0.12)" : "rgba(96,165,250,0.12)", color: p.category === "devlog" ? "#39ff14" : "#60a5fa", border: `1px solid ${p.category === "devlog" ? "rgba(57,255,20,0.2)" : "rgba(96,165,250,0.2)"}` }}>{p.category ?? "blog"}</span>
                         <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: faint }}>{p.date}</span>
                         <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: p.published ? green : faint }}>{p.published ? "● Live" : "○ Draft"}</span>
                       </div>
@@ -676,6 +757,7 @@ export default function AdminPage() {
                   <div><label style={labelStyle}>Read time</label><input value={F.read_time} onChange={e => SF(f => ({ ...f, read_time: e.target.value }))} placeholder="5 min" style={inputStyle} /></div>
                 </div>
                 <div><label style={labelStyle}>Tag</label><select value={F.tag} onChange={e => SF(f => ({ ...f, tag: e.target.value }))} style={{ ...inputStyle, appearance: "none" }}>{TAGS.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                <div><label style={labelStyle}>Category</label><select value={F.category ?? "blog"} onChange={e => SF(f => ({ ...f, category: e.target.value }))} style={{ ...inputStyle, appearance: "none" }}><option value="blog">Blog (Poet)</option><option value="devlog">Devlog (Engineer)</option></select></div>
                 <div><label style={labelStyle}>Excerpt *</label><textarea value={F.excerpt} onChange={e => SF(f => ({ ...f, excerpt: e.target.value }))} rows={3} placeholder="Short description…" style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }} /></div>
                 <div><label style={labelStyle}>Full content</label><textarea value={F.content} onChange={e => SF(f => ({ ...f, content: e.target.value }))} rows={10} placeholder="Full post content…" style={{ ...inputStyle, resize: "vertical", lineHeight: 1.7, fontFamily: "var(--font-mono)", fontSize: 12 }} /></div>
                 <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
@@ -726,7 +808,16 @@ export default function AdminPage() {
                 ) : (
                   <>
                     <div><label style={labelStyle}>Image *</label><input ref={fileRef} type="file" accept="image/*" onChange={handleImageFile} style={{ ...inputStyle, padding: "8px 12px", cursor: "pointer" }} /></div>
-                    {imgPreview && <img src={imgPreview} alt="" style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", border: `1px solid ${border}` }} />}
+                    {imgPreview && <img src={imgPreview} alt="" style={{ width: "100%", aspectRatio: galForm.aspect_ratio === "16:9" ? "16/9" : galForm.aspect_ratio === "3:4" ? "3/4" : galForm.aspect_ratio === "21:9" ? "21/9" : galForm.aspect_ratio === "original" ? "auto" : "1/1", objectFit: "cover", border: `1px solid ${border}` }} />}
+                    <div>
+                      <label style={labelStyle}>Aspect Ratio</label>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 4 }}>
+                        {([["original","Auto"],["1:1","1:1"],["16:9","16:9"],["3:4","3:4"],["21:9","21:9"]] as const).map(([val, label]) => (
+                          <button key={val} type="button" onClick={() => setGalForm(f => ({ ...f, aspect_ratio: val }))}
+                            style={{ padding: "6px 4px", background: galForm.aspect_ratio === val ? rust : surface, border: `1px solid ${galForm.aspect_ratio === val ? rust : border}`, color: galForm.aspect_ratio === val ? "#fff" : dim, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em" }}>{label}</button>
+                        ))}
+                      </div>
+                    </div>
                     <div><label style={labelStyle}>Caption</label><input value={galForm.caption} onChange={e => setGalForm(f => ({ ...f, caption: e.target.value }))} placeholder="Optional caption…" style={inputStyle} /></div>
                     <div><label style={labelStyle}>Source poem</label><input value={galForm.poem} onChange={e => setGalForm(f => ({ ...f, poem: e.target.value }))} placeholder="e.g. Oh Sea" style={inputStyle} /></div>
                   </>
@@ -1073,6 +1164,94 @@ export default function AdminPage() {
               placeholder={"Come all,\nwe're witnessing\nthe eclipse.\n---\nThe sun tries\nher best\nbut never listens."}
             />
             <button onClick={saveHeroLines} disabled={loading} style={{ ...btnStyle(), opacity: loading ? 0.6 : 1 }}>Save Hero Lines</button>
+          </div>
+        )}
+
+        {/* ── CONTENT ── */}
+        {tab === "content" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.25em", color: rustDim, marginBottom: 4 }}>// PAGE CONTENT SETTINGS</div>
+
+            {/* Engineer About */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: "rgba(57,255,20,0.7)", marginBottom: 16 }}>ENGINEER — ABOUT SECTION</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Heading (use \n for line breaks)</label>
+                  <textarea value={engAboutHeading} onChange={e => setEngAboutHeading(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }} placeholder={"I don't wait for the\nright moment.\nI build it."} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Body paragraphs (separate with --- on its own line)</label>
+                  <textarea value={engAboutBody} onChange={e => setEngAboutBody(e.target.value)} rows={6} style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }} placeholder={"First paragraph\n---\nSecond paragraph"} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Manifesto / highlighted phrase</label>
+                  <input value={engAboutManifesto} onChange={e => setEngAboutManifesto(e.target.value)} style={inputStyle} placeholder="The impossible, made." />
+                </div>
+                <button onClick={saveEngAbout} disabled={loading} style={{ ...btnStyle(), opacity: loading ? 0.6 : 1, alignSelf: "flex-start" }}>Save Engineer About</button>
+              </div>
+            </div>
+
+            {/* Engineer Terminal */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: "rgba(57,255,20,0.7)", marginBottom: 16 }}>ENGINEER — TERMINAL ABOUT (cat about.txt)</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Each line of the about output (one per line)</label>
+                  <textarea value={engTerminalAbout} onChange={e => setEngTerminalAbout(e.target.value)} rows={8} style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }} placeholder={"  Name:       Elia Ghazal\n  Location:   Lebanon → the world"} />
+                </div>
+                <button onClick={saveEngTerminal} disabled={loading} style={{ ...btnStyle(), opacity: loading ? 0.6 : 1, alignSelf: "flex-start" }}>Save Terminal About</button>
+              </div>
+            </div>
+
+            {/* Engineer Beyond the Code */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: "rgba(57,255,20,0.7)", marginBottom: 16 }}>ENGINEER — BEYOND THE CODE</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Items — format: Title|Description (one per line)</label>
+                  <textarea value={engBeyondCodeText} onChange={e => setEngBeyondCodeText(e.target.value)} rows={6} style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }} placeholder={"AI Workshop|Attended regional AI/ML workshop.\nEnvironmental Seminar|AUST sustainability series."} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {engBeyondCode.map((item, i) => (
+                    <div key={i} style={{ padding: "8px 12px", background: surface, border: `1px solid ${border}`, fontSize: 12, color: dim }}>
+                      <span style={{ color: text, fontWeight: 600 }}>{item.t}</span> — {item.d}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={saveEngBeyondCode} disabled={loading} style={{ ...btnStyle(), opacity: loading ? 0.6 : 1, alignSelf: "flex-start" }}>Save Beyond Code</button>
+              </div>
+            </div>
+
+            {/* Poet About */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>POET — ABOUT SECTION</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Heading (use \n for line breaks)</label>
+                  <textarea value={poetAboutHeading} onChange={e => setPoetAboutHeading(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }} placeholder={"Writing was\nnever a choice.\nIt was survival."} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Body paragraphs (separate with --- on its own line)</label>
+                  <textarea value={poetAboutBody} onChange={e => setPoetAboutBody(e.target.value)} rows={6} style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12, lineHeight: 1.6 }} placeholder={"First paragraph\n---\nSecond paragraph"} />
+                </div>
+                <button onClick={savePoetAbout} disabled={loading} style={{ ...btnStyle(), opacity: loading ? 0.6 : 1, alignSelf: "flex-start" }}>Save Poet About</button>
+              </div>
+            </div>
+
+            {/* Poet Book */}
+            <div style={{ background: card, border: `1px solid ${border}`, padding: "24px 20px" }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em", color: rustDim, marginBottom: 16 }}>POET — BOOK INFO</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div><label style={labelStyle}>Book title</label><input value={poetBookTitle} onChange={e => setPoetBookTitle(e.target.value)} style={inputStyle} placeholder="Whispers of the Eclipse" /></div>
+                <div>
+                  <label style={labelStyle}>Book description</label>
+                  <textarea value={poetBookDescription} onChange={e => setPoetBookDescription(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }} />
+                </div>
+                <div><label style={labelStyle}>Book purchase link</label><input value={settingBookLink} onChange={e => setSettingBookLink(e.target.value)} style={inputStyle} placeholder="https://linktr.ee/…" /></div>
+                <button onClick={savePoetBook} disabled={loading} style={{ ...btnStyle(), opacity: loading ? 0.6 : 1, alignSelf: "flex-start" }}>Save Book Info</button>
+              </div>
+            </div>
           </div>
         )}
 
