@@ -428,7 +428,7 @@ function TerminalSection({ terminalAbout }: { terminalAbout: string }) {
   }, []);
 
   return (
-    <section style={{ padding: "72px clamp(24px,8vw,120px)", background: "#050505", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+    <section style={{ padding: "clamp(48px,7vw,72px) clamp(20px,8vw,120px)", background: "#050505", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div ref={ref}>
           <div style={{ ...mono, fontSize: 10, letterSpacing: "0.35em", color: "rgba(57,255,20,0.65)", marginBottom: 14, textTransform: "uppercase" }}>{"// Terminal"}</div>
@@ -447,7 +447,7 @@ function TerminalSection({ terminalAbout }: { terminalAbout: string }) {
             </div>
 
             {/* Output area */}
-            <div ref={outputRef} style={{ padding: "20px 24px", minHeight: 260, maxHeight: 360, overflowY: "auto", cursor: "text" }}>
+            <div ref={outputRef} style={{ padding: "20px clamp(12px,3vw,24px)", minHeight: 260, maxHeight: 360, overflowY: "auto", cursor: "text" }}>
               {history.map((entry, i) => (
                 <div key={i}>
                   {entry.cmd && (
@@ -456,24 +456,24 @@ function TerminalSection({ terminalAbout }: { terminalAbout: string }) {
                     </div>
                   )}
                   {entry.output.map((line, j) => (
-                    <div key={j} style={{ ...mono, fontSize: 13, color: "rgba(240,240,240,0.75)", lineHeight: 1.65, whiteSpace: "pre" }}>{line}</div>
+                    <div key={j} style={{ ...mono, fontSize: "clamp(11px,1.4vw,13px)", color: "rgba(240,240,240,0.75)", lineHeight: 1.65, whiteSpace: "pre", overflowX: "auto" }}>{line}</div>
                   ))}
                 </div>
               ))}
               {/* Input line */}
               <div style={{ display: "flex", alignItems: "center", marginTop: 4 }}>
-                <span style={{ ...mono, fontSize: 13, color: "rgba(57,255,20,0.5)", marginRight: 8 }}>elia@portfolio:~$</span>
+                <span style={{ ...mono, fontSize: "clamp(11px,1.4vw,13px)", color: "rgba(57,255,20,0.5)", marginRight: 8 }}>elia@portfolio:~$</span>
                 <input
                   ref={inputRef}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKey}
-                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", ...mono, fontSize: 13, color: gn, caretColor: gn }}
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", ...mono, fontSize: "clamp(11px,1.4vw,13px)", color: gn, caretColor: gn }}
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}
                 />
-                <span style={{ animation: "blink 1s step-end infinite", color: gn, ...mono, fontSize: 13, marginLeft: -2 }}>█</span>
+                <span style={{ animation: "blink 1s step-end infinite", color: gn, ...mono, fontSize: "clamp(11px,1.4vw,13px)", marginLeft: -2 }}>█</span>
               </div>
             </div>
           </div>
@@ -528,7 +528,7 @@ function BuildInPublic() {
   }, []);
 
   return (
-    <section style={{ padding: "72px clamp(24px,8vw,120px)", background: "#000", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+    <section style={{ padding: "clamp(48px,7vw,72px) clamp(20px,8vw,120px)", background: "#000", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div ref={ref}>
           <div style={{ ...mono, fontSize: 10, letterSpacing: "0.35em", color: "rgba(57,255,20,0.65)", marginBottom: 14, textTransform: "uppercase" }}>{"// Build in Public"}</div>
@@ -594,6 +594,7 @@ export default function EngineerPage() {
   const codeRainRef = useRef<ReturnType<typeof initCodeRain>>(null);
   const role        = useTypewriter(ROLES);
   const [scrolled, setScrolled] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   /* Content state — initialised with hardcoded defaults, overridden by DB if set */
   const [featured, setFeatured]     = useState<FeaturedProject[]>(DEFAULT_FEATURED);
@@ -682,7 +683,7 @@ export default function EngineerPage() {
   const contactBody    = useFadeIn(120);
 
   const mono: React.CSSProperties = { fontFamily:"var(--font-mono)" };
-  const sec: React.CSSProperties  = { padding:"72px clamp(24px,8vw,120px)" };
+  const sec: React.CSSProperties  = { padding:"clamp(48px,7vw,72px) clamp(20px,8vw,120px)" };
 
   const mkTag = (accent = "#39ff14"): React.CSSProperties => ({
     ...mono, fontSize:10, letterSpacing:"0.12em", padding:"4px 10px", borderRadius:2,
@@ -715,9 +716,9 @@ export default function EngineerPage() {
         position:"fixed", top:0, left:0, right:0, zIndex:100,
         padding:"0 clamp(24px,6vw,80px)", height:56,
         display:"flex", alignItems:"center", justifyContent:"space-between",
-        background: scrolled ? "rgba(0,0,0,0.88)" : "transparent",
-        backdropFilter: scrolled ? "blur(16px)" : "none",
-        borderBottom: scrolled ? "1px solid rgba(57,255,20,0.06)" : "none",
+        background: scrolled || navOpen ? "rgba(0,0,0,0.95)" : "transparent",
+        backdropFilter: scrolled || navOpen ? "blur(16px)" : "none",
+        borderBottom: scrolled || navOpen ? "1px solid rgba(57,255,20,0.06)" : "none",
         transition:"background 0.4s, border-color 0.4s",
       }}>
         <Link href="/" style={{ ...mono, fontSize:11, letterSpacing:"0.2em",
@@ -725,7 +726,9 @@ export default function EngineerPage() {
           onMouseEnter={e=>(e.currentTarget.style.color="#39ff14")}
           onMouseLeave={e=>(e.currentTarget.style.color="rgba(255,255,255,0.38)")}
         >← HOME</Link>
-        <div style={{ display:"flex", gap:"clamp(16px,3vw,36px)", alignItems:"center" }}>
+
+        {/* Desktop nav links */}
+        <div className="nav-links-desktop" style={{ display:"flex", gap:"clamp(16px,3vw,36px)", alignItems:"center" }}>
           {["work","about","skills","certs","devlog","contact"].map(id => (
             <button key={id} onClick={()=>scroll(id)} style={{
               background:"none", border:"none", cursor:"pointer",
@@ -742,7 +745,35 @@ export default function EngineerPage() {
             onMouseLeave={e=>(e.currentTarget.style.color="rgba(57,255,20,0.55)")}
           >LAB ↗</Link>
         </div>
+
+        {/* Hamburger button — mobile only */}
+        <button className="nav-hamburger" onClick={() => setNavOpen(o => !o)}
+          style={{ color:"rgba(255,255,255,0.55)" }}
+          aria-label="Toggle navigation menu"
+        >
+          <span style={{ transform: navOpen ? "translateY(6.5px) rotate(45deg)" : "none" }} />
+          <span style={{ opacity: navOpen ? 0 : 1 }} />
+          <span style={{ transform: navOpen ? "translateY(-6.5px) rotate(-45deg)" : "none" }} />
+        </button>
       </nav>
+
+      {/* Mobile nav dropdown */}
+      <div className={`nav-mobile-menu${navOpen ? " open" : ""}`}
+        style={{ background:"rgba(0,0,0,0.97)", borderBottomColor:"rgba(57,255,20,0.1)" }}>
+        {["work","about","skills","certs","devlog","contact"].map(id => (
+          <button key={id} onClick={()=>{ scroll(id); setNavOpen(false); }} style={{
+            background:"none", border:"none", cursor:"pointer",
+            ...mono, fontSize:12, letterSpacing:"0.2em",
+            color:"rgba(255,255,255,0.5)", textTransform:"uppercase",
+            padding:"12px 0", textAlign:"left", width:"100%",
+            borderBottom:"1px solid rgba(255,255,255,0.04)",
+          }}>{id}</button>
+        ))}
+        <Link href="/engineer/lab"
+          style={{ ...mono, fontSize:12, letterSpacing:"0.2em", color:"rgba(57,255,20,0.7)", textDecoration:"none", padding:"12px 0", display:"block", textTransform:"uppercase" }}
+          onClick={() => setNavOpen(false)}
+        >LAB ↗</Link>
+      </div>
 
       {/* ── HERO ── */}
       <section style={{ position:"relative", height:"100vh", overflow:"hidden",
@@ -822,7 +853,7 @@ export default function EngineerPage() {
       </section>
 
       {/* ── STATS BAR ── */}
-      <div ref={statsGrid} style={{ display:"grid",
+      <div ref={statsGrid} className="stats-4-grid" style={{ display:"grid",
         gridTemplateColumns:"repeat(4, 1fr)", gap:1,
         background:"#111", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
         {stats.map(s => <StatCard key={s.label} {...s} />)}
@@ -834,7 +865,7 @@ export default function EngineerPage() {
       {/* ── ABOUT ── */}
       <section id="about" style={{ ...sec, background:"#050505",
         borderTop:"1px solid rgba(255,255,255,0.04)" }}>
-        <div style={{ maxWidth:1100, margin:"0 auto",
+        <div className="mobile-stack" style={{ maxWidth:1100, margin:"0 auto",
           display:"grid", gridTemplateColumns:"1fr 1fr",
           gap:"clamp(40px,6vw,80px)", alignItems:"start" }}>
           <div>
@@ -933,7 +964,7 @@ export default function EngineerPage() {
                   <Badge status={p.status} />
                   <span style={{ ...mono, fontSize:10, letterSpacing:"0.14em", color:"rgba(255,255,255,0.25)" }}>{p.period}</span>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"minmax(160px,1fr) 2fr",
+                <div className="mobile-stack" style={{ display:"grid", gridTemplateColumns:"minmax(160px,1fr) 2fr",
                   gap:"clamp(20px,4vw,52px)", alignItems:"start" }}>
                   <div>
                     <h3 style={{ fontWeight:700, fontSize:"clamp(20px,2.5vw,32px)",
@@ -1096,8 +1127,8 @@ export default function EngineerPage() {
                 }}
               >EXPLORE THE LAB ↗</Link>
             </div>
-            {/* Mini bar-chart preview */}
-            <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:80, width:140,
+            {/* Mini bar-chart preview — hidden on mobile */}
+            <div className="mobile-hidden" style={{ display:"flex", alignItems:"flex-end", gap:3, height:80, width:140,
               padding:"0 4px", flexShrink:0, opacity:0.7 }}>
               {[45,82,23,67,38,91,55,74,30,60,85,20,50,70,40].map((h, i) => (
                 <div key={i} style={{ flex:1, height:`${h}%`,
@@ -1117,7 +1148,7 @@ export default function EngineerPage() {
               letterSpacing:"-0.02em", marginBottom:60 }}>Certifications &amp; Awards</h2>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"3fr 2fr",
+          <div className="mobile-stack" style={{ display:"grid", gridTemplateColumns:"3fr 2fr",
             gap:"clamp(32px,5vw,64px)", alignItems:"start" }}>
             {/* Certs */}
             <div>

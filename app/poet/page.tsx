@@ -58,6 +58,7 @@ export default function PoetPage() {
   const [heroIdx, setHeroIdx] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [activePoem, setActivePoem] = useState(0);
   const [poems, setPoems] = useState<Poem[]>(DEFAULT_POEMS);
   const [heroLines, setHeroLines] = useState<string[]>(DEFAULT_HERO_LINES);
@@ -117,7 +118,7 @@ export default function PoetPage() {
   const contactHead = useFade(0);
   const contactBody = useFade(100);
 
-  const sec: React.CSSProperties = { padding: "88px clamp(24px, 8vw, 120px)" };
+  const sec: React.CSSProperties = { padding: "clamp(56px,7vw,88px) clamp(20px,8vw,120px)" };
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
 
   return (
@@ -139,13 +140,15 @@ export default function PoetPage() {
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
         padding: "0 clamp(24px,6vw,80px)", height: 56,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: scrolled ? "rgba(244,241,236,0.94)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
-        borderBottom: scrolled ? `1px solid ${border}` : "none",
+        background: scrolled || navOpen ? "rgba(244,241,236,0.97)" : "transparent",
+        backdropFilter: scrolled || navOpen ? "blur(12px)" : "none",
+        borderBottom: scrolled || navOpen ? `1px solid ${border}` : "none",
         transition: "background 0.35s, border-color 0.35s",
       }}>
         <Link href="/" className="nav-link" style={{ ...mono, fontSize: 11, letterSpacing: "0.2em", color: dim, textDecoration: "none", transition: "color 0.2s" }}>← HOME</Link>
-        <div style={{ display: "flex", gap: "clamp(12px,2vw,28px)", alignItems: "center" }}>
+
+        {/* Desktop nav links */}
+        <div className="nav-links-desktop" style={{ display: "flex", gap: "clamp(12px,2vw,28px)", alignItems: "center" }}>
           {["about", "book", "poems", "contact"].map(id => (
             <button key={id} onClick={() => scrollTo(id)} className="nav-link" style={{
               background: "none", border: "none", cursor: "pointer",
@@ -164,7 +167,34 @@ export default function PoetPage() {
             onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(184,92,56,0.3)"; }}
           >CV ↓</a>
         </div>
+
+        {/* Hamburger button — mobile only */}
+        <button className="nav-hamburger" onClick={() => setNavOpen(o => !o)}
+          style={{ color: dim }}
+          aria-label="Toggle navigation menu"
+        >
+          <span style={{ transform: navOpen ? "translateY(6.5px) rotate(45deg)" : "none" }} />
+          <span style={{ opacity: navOpen ? 0 : 1 }} />
+          <span style={{ transform: navOpen ? "translateY(-6.5px) rotate(-45deg)" : "none" }} />
+        </button>
       </nav>
+
+      {/* Mobile nav dropdown */}
+      <div className={`nav-mobile-menu${navOpen ? " open" : ""}`}
+        style={{ background: "rgba(244,241,236,0.97)", borderBottomColor: border }}>
+        {["about", "book", "poems", "contact"].map(id => (
+          <button key={id} onClick={() => { scrollTo(id); setNavOpen(false); }} className="nav-link" style={{
+            background: "none", border: "none", cursor: "pointer",
+            ...mono, fontSize: 12, letterSpacing: "0.2em", color: dim,
+            textTransform: "uppercase", padding: "12px 0", textAlign: "left", width: "100%",
+            borderBottom: `1px solid ${border}`,
+          }}>{id}</button>
+        ))}
+        <a href="/api/cv" target="_blank" rel="noopener noreferrer" onClick={() => setNavOpen(false)}
+          style={{ ...mono, fontSize: 12, letterSpacing: "0.2em", color: rust, textDecoration: "none", padding: "12px 0", display: "block", textTransform: "uppercase" }}>
+          CV ↓
+        </a>
+      </div>
 
       {/* ══════════════════════════════════
           HERO — editorial scale
@@ -219,7 +249,7 @@ export default function PoetPage() {
           ABOUT
       ══════════════════════════════════ */}
       <section id="about" style={{ ...sec, borderBottom: `1px solid ${border}` }}>
-        <div style={{ maxWidth: 1060, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(48px,7vw,96px)", alignItems: "start" }}>
+        <div className="mobile-stack" style={{ maxWidth: 1060, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(48px,7vw,96px)", alignItems: "start" }}>
           <div>
             <div ref={aboutHead}>
               <div style={{ ...mono, fontSize: 10, letterSpacing: "0.3em", color: rustDim, marginBottom: 20, textTransform: "uppercase" }}>// About</div>
@@ -268,7 +298,7 @@ export default function PoetPage() {
           BOOK
       ══════════════════════════════════ */}
       <section id="book" style={{ ...sec, background: ink, borderBottom: `1px solid rgba(244,241,236,0.08)` }}>
-        <div ref={bookRef} style={{ maxWidth: 1060, margin: "0 auto", display: "grid", gridTemplateColumns: "auto 1fr", gap: "clamp(32px,5vw,64px)", alignItems: "center" }}>
+        <div ref={bookRef} className="mobile-stack" style={{ maxWidth: 1060, margin: "0 auto", display: "grid", gridTemplateColumns: "auto 1fr", gap: "clamp(32px,5vw,64px)", alignItems: "center" }}>
 
           {/* Book cover image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -326,9 +356,9 @@ export default function PoetPage() {
             </h2>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 2 }}>
+          <div className="poems-grid" style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 2 }}>
             {/* Left rail — poem selector */}
-            <div style={{ borderRight: `1px solid ${border}` }}>
+            <div className="poems-selector" style={{ borderRight: `1px solid ${border}` }}>
               {poems.map((p, i) => (
                 <button key={i} onClick={() => setActivePoem(i)}
                   className={`poem-tab${activePoem === i ? " active" : ""}`}
@@ -347,7 +377,7 @@ export default function PoetPage() {
 
             {/* Right panel — poem display */}
             {poems.length > 0 && (
-            <div key={activePoem} style={{ padding: "0 0 0 clamp(24px,4vw,52px)", animation: "fadeSlide 0.35s ease both" }}>
+            <div key={activePoem} className="poems-display" style={{ padding: "0 0 0 clamp(24px,4vw,52px)", animation: "fadeSlide 0.35s ease both" }}>
               {(() => {
                 const idx = Math.min(activePoem, poems.length - 1);
                 const poem = poems[idx];
@@ -376,7 +406,7 @@ export default function PoetPage() {
       <section style={{ ...sec, borderBottom: `1px solid ${border}` }}>
         <div style={{ maxWidth: 1060, margin: "0 auto" }}>
           <div style={{ ...mono, fontSize: 10, letterSpacing: "0.3em", color: rustDim, marginBottom: 48, textTransform: "uppercase" }}>// Explore More</div>
-          <div ref={gatewayRef} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+          <div ref={gatewayRef} className="mobile-stack" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
 
             {/* Journal */}
             <Link href="/poet/blog" className="gateway-card" style={{
