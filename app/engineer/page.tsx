@@ -602,24 +602,24 @@ function BuildInPublic() {
               <span style={{ animation: "blink 1s step-end infinite" }}>▌</span>
             </div>
           ) : stats ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px,1fr))", gap: 2 }}>
+            <div className="dash-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
               {/* Stats cards */}
               {[
-                { label: "Public Repos",      value: String(stats.publicRepos), accent: gn },
+                { label: "Public Repos",          value: String(stats.publicRepos), accent: gn },
                 { label: "Approx. Lines of Code", value: stats.totalLinesApprox >= 1000 ? `~${Math.round(stats.totalLinesApprox / 1000)}k` : `~${stats.totalLinesApprox}`, accent: "#f59e0b" },
-                { label: "Member Since",      value: stats.memberSince ? String(stats.memberSince) : "—", accent: "#60a5fa" },
+                { label: "Member Since",          value: stats.memberSince ? String(stats.memberSince) : "—", accent: "#60a5fa" },
               ].map(s => (
-                <div key={s.label} style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", borderBottom: `2px solid ${s.accent}30`, transition: "border-color 0.25s" }}
+                <div key={s.label} style={{ padding: "clamp(18px,2.5vw,28px) clamp(16px,2vw,24px)", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", borderBottom: `2px solid ${s.accent}30`, transition: "border-color 0.25s" }}
                   onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderBottomColor = s.accent}
                   onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderBottomColor = `${s.accent}30`}>
-                  <div style={{ fontWeight: 700, fontSize: "clamp(28px,3vw,40px)", color: "#fff", lineHeight: 1, marginBottom: 6 }}>{s.value}</div>
+                  <div style={{ fontWeight: 700, fontSize: "clamp(28px,3vw,44px)", color: "#fff", lineHeight: 1, marginBottom: 8 }}>{s.value}</div>
                   <div style={{ ...mono, fontSize: 9, letterSpacing: "0.22em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>{s.label}</div>
                 </div>
               ))}
 
-              {/* Top languages */}
+              {/* Top languages — full width */}
               {stats.topLanguages.length > 0 && (
-                <div style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", gridColumn: "span 3" }}>
+                <div style={{ padding: "clamp(18px,2.5vw,28px) clamp(16px,2vw,24px)", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", gridColumn: "1 / -1" }}>
                   <div style={{ ...mono, fontSize: 9, letterSpacing: "0.22em", color: "rgba(255,255,255,0.3)", marginBottom: 14, textTransform: "uppercase" }}>Top Languages</div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {stats.topLanguages.map((lang, i) => (
@@ -711,6 +711,8 @@ export default function EngineerPage() {
         @keyframes orbGlow { 0%,100%{opacity:0.6; transform:translate(-50%,-50%) scale(1)} 50%{opacity:1; transform:translate(-50%,-50%) scale(1.08)} }
         .hover-lift { transition: transform 0.3s ease, box-shadow 0.3s ease !important; }
         .hover-lift:hover { transform: translateY(-3px) !important; }
+        @media (max-width: 640px) { .dash-grid { grid-template-columns: 1fr !important; } }
+        @media (min-width: 641px) and (max-width: 900px) { .dash-grid { grid-template-columns: repeat(2, 1fr) !important; } }
       `}</style>
 
       {/* ── NAV ── */}
