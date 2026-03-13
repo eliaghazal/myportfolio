@@ -256,6 +256,9 @@ function Lightbox({ item, onClose }: { item: GalleryItem; onClose: () => void })
   );
 }
 
+/* ─── Modular arithmetic helper: wraps x into [0, m) — works for negative x ─── */
+function wrapMod(x: number, m: number) { return ((x % m) + m) % m; }
+
 /* ─── Main Page ─── */
 export default function GalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([]);
@@ -265,6 +268,8 @@ export default function GalleryPage() {
   // 2D drag state
   const containerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
+  const tileRef = useRef<HTMLDivElement>(null);
+  const tileSizeRef = useRef({ w: 0, h: 0 });
   const posRef = useRef({ x: 0, y: 0 });
   const velRef = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
@@ -282,7 +287,20 @@ export default function GalleryPage() {
       .catch(() => {});
   }, []);
 
-  // Inertia
+  // Measure tile dimensions for seamless wrap-around
+  useEffect(() => {
+    const el = tileRef.current;
+    if (!el) return;
+    const update = () => {
+      tileSizeRef.current = { w: el.offsetWidth, h: el.offsetHeight };
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Inertia + modulo wrap-around for infinite tiling
   useEffect(() => {
     const animate = () => {
       if (!isDragging.current) {
@@ -294,7 +312,12 @@ export default function GalleryPage() {
         }
       }
       if (innerRef.current) {
-        innerRef.current.style.transform = `translate(${posRef.current.x}px, ${posRef.current.y}px)`;
+        const { w: tileW, h: tileH } = tileSizeRef.current;
+        // Negate pos so wrapMod returns a value in [0, tile), then negate back
+        // to get a translate in (-tile, 0] — keeping the viewport over the 2×2 block
+        const displayX = tileW > 0 ? -wrapMod(-posRef.current.x, tileW) : posRef.current.x;
+        const displayY = tileH > 0 ? -wrapMod(-posRef.current.y, tileH) : posRef.current.y;
+        innerRef.current.style.transform = `translate(${displayX}px, ${displayY}px)`;
       }
       animRef.current = requestAnimationFrame(animate);
     };
@@ -336,7 +359,7 @@ export default function GalleryPage() {
   }, []);
   const onPointerUp = useCallback(() => { isDragging.current = false; }, []);
 
-  // Build grid: media + interleaved quotes, then REPEAT to fill space
+  // Build single tile: media + interleaved quotes
   const mediaItems = items.filter(it => (it.type === "image" || it.type === "video") && (it.imageUrl || it.image_url || it.video_url));
   const quoteItems = items.filter(it => it.type === "quote" && it.text);
 
@@ -350,13 +373,16 @@ export default function GalleryPage() {
   });
   while (qIdx < quoteItems.length) baseGrid.push(quoteItems[qIdx++]);
 
-  // Repeat items to fill space — at least 3x so user never hits empty space
-  const repeats = baseGrid.length > 0 ? Math.max(3, Math.ceil(36 / baseGrid.length)) : 0;
-  const gridItems: GalleryItem[] = [];
-  for (let r = 0; r < repeats; r++) {
-    baseGrid.forEach((item, i) => {
-      gridItems.push({ ...item, id: `${item.id}_rep${r}_${i}` });
-    });
+  // Repeat within the tile to ensure enough rows to fill the viewport
+  const minItems = 24;
+  const tileItems: GalleryItem[] = [];
+  if (baseGrid.length > 0) {
+    const repeats = Math.max(1, Math.ceil(minItems / baseGrid.length));
+    for (let r = 0; r < repeats; r++) {
+      baseGrid.forEach((item, i) => {
+        tileItems.push({ ...item, id: `${item.id}_r${r}_${i}` });
+      });
+    }
   }
 
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
@@ -417,29 +443,35 @@ export default function GalleryPage() {
           width: "130%", height: "130%",
         }}>
           <div ref={innerRef} style={{ willChange: "transform" }}>
-            {/* Dense mosaic grid — minimal gaps */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gridAutoRows: "clamp(200px, 24vw, 340px)",
-              gap: 2,
-              width: "max(110vw, 1600px)",
-            }}>
-              {gridItems.map((item, i) => {
-                const size = CELL_SIZES[i % CELL_SIZES.length];
-                return (
-                  <div key={item.id} style={{
-                    gridColumn: `span ${size.c}`,
-                    gridRow: `span ${size.r}`,
+            {/* 2×2 tile arrangement — modulo wrapping makes this infinite in all 4 directions */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, max(110vw, 1600px))" }}>
+              {[0, 1, 2, 3].map(tileIdx => (
+                <div key={tileIdx} ref={tileIdx === 0 ? tileRef : undefined}>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gridAutoRows: "clamp(200px, 24vw, 340px)",
+                    gap: 2,
+                    width: "max(110vw, 1600px)",
                   }}>
-                    {item.type === "quote" ? (
-                      <QuoteCell item={item} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
-                    ) : (
-                      <GalleryCell item={item} index={i} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
-                    )}
+                    {tileItems.map((item, i) => {
+                      const size = CELL_SIZES[i % CELL_SIZES.length];
+                      return (
+                        <div key={`t${tileIdx}_${item.id}`} style={{
+                          gridColumn: `span ${size.c}`,
+                          gridRow: `span ${size.r}`,
+                        }}>
+                          {item.type === "quote" ? (
+                            <QuoteCell item={item} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
+                          ) : (
+                            <GalleryCell item={item} index={i} onClick={() => { if (!clickGuard.current) setOverlayItem(item); }} />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
