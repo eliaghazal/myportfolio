@@ -6,12 +6,29 @@ import gsap from "gsap";
 
 /* ─── Intro lines ─────────────────────────────────────────── */
 const INTRO_LINES = [
-  "Born in Lebanon.",
-  "Raised under pressure.",
-  "He writes in two languages:",
-  "Code.",
-  "And poetry.",
+  "some days are heavier than others.",
+  "but I keep showing up.",
+  "with a keyboard in one hand,",
+  "and a pen in the other.",
+  "that's all I know how to do.",
 ];
+
+/* ─── Voiceover sync timestamps ───────────────────────────── */
+// When you record a voiceover, drop the file at /public/voiceover.mp3
+// and adjust these timestamps (in seconds) to match your recording.
+const VOICEOVER_SYNC = [
+  { line: 0, time: 0.5  }, // "some days are heavier than others."
+  { line: 1, time: 3.8  }, // "but I keep showing up."
+  { line: 2, time: 6.5  }, // "with a keyboard in one hand,"
+  { line: 3, time: 9.0  }, // "and a pen in the other."
+  { line: 4, time: 12.0 }, // "that's all I know how to do."
+];
+
+/* ─── Intro timing constants ──────────────────────────────── */
+// How long each line is held before fading out (seconds)
+const LINE_HOLD_DURATION = 1.3;
+// How long to wait before starting the GSAP fallback if audio doesn't load (ms)
+const AUDIO_LOAD_TIMEOUT_MS = 1500;
 
 /* ─── Code rain fragments ─────────────────────────────────── */
 const CODE_FRAGS = [
@@ -236,6 +253,80 @@ function initHandwriting(container: HTMLDivElement): { destroy: () => void } {
   };
 }
 
+/* ─── Intro Particles ─────────────────────────────────────── */
+// Separate from the code-rain canvas — subtle dust motes that drift
+// slowly during the text phase, then respond to the split.
+function initParticles(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const resize = () => {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  };
+  resize();
+
+  const COUNT = 72;
+  type Particle = { x: number; y: number; vx: number; vy: number; size: number; opacity: number };
+  const particles: Particle[] = Array.from({ length: COUNT }, () => ({
+    x:       Math.random() * canvas.width,
+    y:       Math.random() * canvas.height,
+    vx:      (Math.random() - 0.5) * 0.12,
+    vy:      (Math.random() - 0.5) * 0.12 - 0.02, // slight upward drift
+    size:    Math.random() * 0.8 + 0.4,
+    opacity: Math.random() * 0.1 + 0.05,
+  }));
+
+  let animId: number;
+  let gatherStrength = 0; // 0 = free drift, >0 = pulled toward center
+  let splitActive    = false;
+
+  const draw = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2;
+
+    for (const p of particles) {
+      if (gatherStrength > 0) {
+        const dx = cx - p.x;
+        p.vx    += dx * 0.00008 * gatherStrength;
+        p.vx    *= 0.995;
+      }
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap edges
+      if (p.x < -5)                    p.x = canvas.width  + 5;
+      if (p.x > canvas.width  + 5)     p.x = -5;
+      if (p.y < -5)                    p.y = canvas.height + 5;
+      if (p.y > canvas.height + 5)     p.y = -5;
+
+      let r = 255, g = 255, b = 250;
+      if (splitActive) {
+        if (p.x < cx) { r = 57;  g = 255; b = 20;  }   // green — left / engineer
+        else           { r = 245; g = 224; b = 184; }   // gold  — right / poet
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${p.opacity})`;
+      ctx.fill();
+    }
+
+    animId = requestAnimationFrame(draw);
+  };
+  draw();
+
+  const onResize = () => resize();
+  window.addEventListener("resize", onResize);
+
+  return {
+    startGathering: () => { gatherStrength = 1; },
+    activateSplit:  () => { splitActive = true; gatherStrength = 0; },
+    destroy:        () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); },
+  };
+}
+
 /* ─── Page ────────────────────────────────────────────────── */
 export default function LandingPage() {
   const router = useRouter();
@@ -243,36 +334,49 @@ export default function LandingPage() {
   const introRef       = useRef<HTMLDivElement>(null);
   const introLineRefs  = useRef<(HTMLDivElement | null)[]>([]);
   const skipRef        = useRef<HTMLDivElement>(null);
-  const cursorRef      = useRef<HTMLDivElement>(null);
+  const seamRef        = useRef<HTMLDivElement>(null);
   const leftRef        = useRef<HTMLDivElement>(null);
   const rightRef       = useRef<HTMLDivElement>(null);
 
-  // ← Seam now uses a wrapper div for positioning + inner div for scaleY animation
-  // This avoids GSAP overwriting translateX when animating scaleY
-  const codeCanvasRef  = useRef<HTMLCanvasElement>(null);
-  const hwContainerRef = useRef<HTMLDivElement>(null);
-  const leftLabelRef   = useRef<HTMLDivElement>(null);
-  const leftSubRef     = useRef<HTMLDivElement>(null);
-  const leftEnterRef   = useRef<HTMLDivElement>(null);
-  const rightLabelRef  = useRef<HTMLDivElement>(null);
-  const rightSubRef    = useRef<HTMLDivElement>(null);
-  const rightEnterRef  = useRef<HTMLDivElement>(null);
+  const particleCanvasRef = useRef<HTMLCanvasElement>(null);
+  const codeCanvasRef     = useRef<HTMLCanvasElement>(null);
+  const hwContainerRef    = useRef<HTMLDivElement>(null);
+  const leftLabelRef      = useRef<HTMLDivElement>(null);
+  const leftSubRef        = useRef<HTMLDivElement>(null);
+  const leftEnterRef      = useRef<HTMLDivElement>(null);
+  const rightLabelRef     = useRef<HTMLDivElement>(null);
+  const rightSubRef       = useRef<HTMLDivElement>(null);
+  const rightEnterRef     = useRef<HTMLDivElement>(null);
+  const audioRef          = useRef<HTMLAudioElement>(null);
+  const muteButtonRef     = useRef<HTMLDivElement>(null);
 
-  const codeRainRef = useRef<ReturnType<typeof initCodeRain>>(null);
-  const hwRef       = useRef<ReturnType<typeof initHandwriting>>(null);
-  const interactive = useRef(false);
-  const navigating  = useRef(false);
+  const codeRainRef  = useRef<ReturnType<typeof initCodeRain>>(null);
+  const hwRef        = useRef<ReturnType<typeof initHandwriting>>(null);
+  const particleRef  = useRef<ReturnType<typeof initParticles>>(null);
+  const interactive  = useRef(false);
+  const navigating   = useRef(false);
+  const mutedRef     = useRef(false);
 
   const showFinal = useCallback(() => {
-    gsap.set(introRef.current,  { display: "none" });
-    gsap.set(cursorRef.current, { opacity: 0 });
-    gsap.set([leftRef.current, rightRef.current], { opacity: 1 });
+    // Set session flag so the intro is skipped on return visits.
+    // Also called by SKIP and reduced-motion paths — natural completion sets it in P5.
+    try { sessionStorage.setItem("elia_intro_seen", "true"); } catch { /* private browsing */ }
+
+    gsap.set(introRef.current, { display: "none" });
+    gsap.set(seamRef.current,  { display: "none" });
+    // clearProps:"filter" is a defensive guard — SKIP kills all tweens mid-flight,
+    // so any in-progress filter animation is cleared to avoid residual glitches.
+    gsap.set([leftRef.current, rightRef.current], { opacity: 1, clearProps: "filter" });
     gsap.set(
       [leftLabelRef.current, rightLabelRef.current,
        leftSubRef.current,   rightSubRef.current],
       { opacity: 1, y: 0 }
     );
-    gsap.set(skipRef.current, { opacity: 0 });
+    gsap.set(skipRef.current,       { opacity: 0 });
+    gsap.set(muteButtonRef.current, { opacity: 0 });
+    // Hide and destroy particle canvas — it's only needed during the intro
+    if (particleCanvasRef.current) particleCanvasRef.current.style.display = "none";
+    particleRef.current?.destroy();
     if (codeCanvasRef.current && !codeRainRef.current)
       codeRainRef.current = initCodeRain(codeCanvasRef.current);
     if (hwContainerRef.current && !hwRef.current)
@@ -285,88 +389,179 @@ export default function LandingPage() {
       showFinal(); return;
     }
 
+    // ── Session check: skip intro on return visits ──────────────
+    try {
+      if (sessionStorage.getItem("elia_intro_seen") === "true") {
+        showFinal(); return;
+      }
+    } catch { /* private browsing — play the intro */ }
+
+    // ── Particles ────────────────────────────────────────────────
+    if (particleCanvasRef.current)
+      particleRef.current = initParticles(particleCanvasRef.current);
+
     let skipped = false;
     const skip = () => {
       if (skipped) return;
       skipped = true;
+      if (audioRef.current) { audioRef.current.pause(); }
       gsap.killTweensOf("*");
       showFinal();
     };
     skipRef.current?.addEventListener("click", skip);
-    gsap.to(skipRef.current, { opacity: 0.35, duration: 0.6, delay: 0.8 });
+    gsap.to(skipRef.current, { opacity: 0.35, duration: 0.6, delay: 1.0 });
 
-    /* P1 */
-    const tl = gsap.timeline({
-      onComplete: () => {
-        if (skipped) return;
-        gsap.to(introRef.current, {
-          opacity: 0, duration: 0.35,
-          onComplete: () => {
-            if (introRef.current) introRef.current.style.display = "none";
-            p2();
-          },
+    // ── Split reveal (P_split) ───────────────────────────────────
+    const triggerSplit = () => {
+      if (skipped) return;
+      // Pause + gather particles toward center
+      particleRef.current?.startGathering();
+
+      // Seam (vertical light line) forms
+      if (seamRef.current) {
+        gsap.set(seamRef.current, { scaleY: 0, opacity: 0 });
+      }
+      gsap.to(seamRef.current, {
+        opacity: 1, scaleY: 1, duration: 0.5, ease: "power2.out",
+        delay: 0.4, transformOrigin: "center center",
+        onComplete: () => {
+          if (skipped) return;
+          // Halves fade in behind the seam
+          gsap.to([leftRef.current, rightRef.current], {
+            opacity: 1, duration: 0.6, ease: "power2.out",
+          });
+          // Seam fades away as halves settle
+          gsap.to(seamRef.current, { opacity: 0, duration: 0.45, delay: 0.35 });
+
+          // Particles shift to split colors after halves are visible (~half of fade-in duration)
+          setTimeout(() => { particleRef.current?.activateSplit(); }, 700);
+
+          // Labels + canvases (P5)
+          setTimeout(() => {
+            if (skipped) return;
+            if (codeCanvasRef.current && !codeRainRef.current)
+              codeRainRef.current = initCodeRain(codeCanvasRef.current);
+            if (hwContainerRef.current && !hwRef.current)
+              hwRef.current = initHandwriting(hwContainerRef.current);
+            // Hide particle canvas once the split screen takes over
+            if (particleCanvasRef.current)
+              particleCanvasRef.current.style.display = "none";
+            particleRef.current?.destroy();
+
+            gsap.to(leftLabelRef.current,  { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" });
+            gsap.to(rightLabelRef.current, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out", delay: 0.1 });
+            gsap.to([leftSubRef.current, rightSubRef.current], {
+              opacity: 1, y: 0, duration: 0.6, ease: "power3.out", delay: 0.3,
+              onComplete: () => {
+                interactive.current = true;
+                try { sessionStorage.setItem("elia_intro_seen", "true"); } catch { /* ok */ }
+              },
+            });
+            gsap.to(skipRef.current,       { opacity: 0, duration: 0.3 });
+            gsap.to(muteButtonRef.current, { opacity: 0, duration: 0.3 });
+          }, 800);
+        },
+      });
+    };
+
+    // ── Trigger a single intro line ──────────────────────────────
+    const triggerLine = (index: number, onDone?: () => void) => {
+      const el = introLineRefs.current[index];
+      if (!el) { onDone?.(); return; }
+      gsap.timeline({ onComplete: onDone })
+        .to(el, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
+        .to(el, { opacity: 0,       duration: 0.5, ease: "power2.in"  }, `+=${LINE_HOLD_DURATION}`);
+    };
+
+    // ── Audio-driven or GSAP-driven line reveals ─────────────────
+    const audio = audioRef.current;
+    let audioAvailable = false;
+
+    const runGsapFallback = () => {
+      // Sequential GSAP timeline: each line fades in, holds, fades out
+      const tl = gsap.timeline();
+      INTRO_LINES.forEach((_, i) => {
+        const el = introLineRefs.current[i];
+        if (!el) return;
+        tl.to(el, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
+          .to(el, { opacity: 0,       duration: 0.5, ease: "power2.in"  }, `+=${LINE_HOLD_DURATION}`)
+          .to({},  { duration: 0.35 }); // brief pause between lines
+      });
+      tl.call(() => { setTimeout(triggerSplit, 300); });
+      return tl;
+    };
+
+    let tl: ReturnType<typeof gsap.timeline> | null = null;
+
+    if (audio) {
+      const syncTriggered = new Array(INTRO_LINES.length).fill(false);
+
+      const onTimeUpdate = () => {
+        if (!audio || skipped) return;
+        const ct = audio.currentTime;
+        for (const { line, time } of VOICEOVER_SYNC) {
+          if (!syncTriggered[line] && ct >= time) {
+            syncTriggered[line] = true;
+            const isLast = line === INTRO_LINES.length - 1;
+            triggerLine(line, isLast ? () => setTimeout(triggerSplit, 300) : undefined);
+          }
+        }
+      };
+
+      const onCanPlay = () => {
+        if (skipped || audioAvailable) return;
+        audioAvailable = true;
+        // Show mute button
+        gsap.to(muteButtonRef.current, { opacity: 0.35, duration: 0.4 });
+        audio.play().catch(() => {
+          // Autoplay blocked — remove all audio listeners and run GSAP timing
+          audio.removeEventListener("canplay",    onCanPlay);
+          audio.removeEventListener("error",      onError);
+          audio.removeEventListener("timeupdate", onTimeUpdate);
+          gsap.set(muteButtonRef.current, { opacity: 0 });
+          tl = runGsapFallback();
         });
-      },
-    });
-    INTRO_LINES.forEach((_, i) => {
-      const el = introLineRefs.current[i];
-      if (!el) return;
-      const hold = i >= 3 ? 1.2 : 0.9;
-      tl.to(el, { opacity: 1, y: 0,  duration: 0.5,  ease: "power2.out" })
-        .to(el, { opacity: 0,        duration: 0.4,  ease: "power2.in"  }, `+=${hold}`);
-      if (i === 3) tl.to({}, { duration: 0.3 });
-    });
-    tl.to({}, { duration: 0.5 });
+        audio.addEventListener("timeupdate", onTimeUpdate);
+      };
 
-    /* P2 — cursor */
-    const p2 = () => {
-      if (skipped) return;
-      gsap.timeline({ onComplete: p3 })
-        .to(cursorRef.current, { opacity: 1, duration: 0.15 })
-        .to(cursorRef.current, { opacity: 0, duration: 0.15, delay: 0.45 })
-        .to(cursorRef.current, { opacity: 1, duration: 0.15, delay: 0.12 })
-        .to(cursorRef.current, { opacity: 0, duration: 0.15, delay: 0.45 });
-    };
+      const onError = () => {
+        // File not found (404) or other load error — use GSAP timing
+        tl = runGsapFallback();
+      };
 
-    /* P3 — halves appear */
-    const p3 = () => {
-      if (skipped) return;
-      gsap.to([leftRef.current, rightRef.current], { opacity: 1, duration: 0.4 });
-      setTimeout(p4, 500);
-    };
+      audio.addEventListener("canplay",  onCanPlay, { once: true });
+      audio.addEventListener("error",    onError,   { once: true });
+      // If the audio file doesn't exist the error fires quickly;
+      // wait before falling back to GSAP so we don't race with canplay.
+      const fallbackTimer = setTimeout(() => {
+        if (!audioAvailable && !skipped) {
+          // Audio never became available — remove listeners and run GSAP
+          audio.removeEventListener("canplay",    onCanPlay);
+          audio.removeEventListener("error",      onError);
+          tl = runGsapFallback();
+        }
+      }, AUDIO_LOAD_TIMEOUT_MS);
 
-    /* P4 — crack: brief white flash at the split point, no persistent line */
-    const p4 = () => {
-      if (skipped) return;
-      // Flash both halves slightly bright then settle — gives crack feel without a line
-      gsap.to([leftRef.current, rightRef.current], {
-        filter: "brightness(1.4)", duration: 0.08, yoyo: true, repeat: 1,
-        onComplete: p5,
-      });
-    };
-
-    /* P5 — labels + canvases */
-    const p5 = () => {
-      if (skipped) return;
-      if (codeCanvasRef.current && !codeRainRef.current)
-        codeRainRef.current = initCodeRain(codeCanvasRef.current);
-      if (hwContainerRef.current && !hwRef.current)
-        hwRef.current = initHandwriting(hwContainerRef.current);
-
-      gsap.to(leftLabelRef.current,  { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" });
-      gsap.to(rightLabelRef.current, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out", delay: 0.1 });
-      gsap.to([leftSubRef.current, rightSubRef.current], {
-        opacity: 1, y: 0, duration: 0.6, ease: "power3.out", delay: 0.3,
-        onComplete: () => { interactive.current = true; },
-      });
-      gsap.to(skipRef.current, { opacity: 0, duration: 0.3 });
-    };
-
-    return () => {
-      codeRainRef.current?.destroy();
-      hwRef.current?.destroy();
-      tl.kill();
-    };
+      return () => {
+        clearTimeout(fallbackTimer);
+        codeRainRef.current?.destroy();
+        hwRef.current?.destroy();
+        particleRef.current?.destroy();
+        tl?.kill();
+        audio.pause();
+        audio.removeEventListener("canplay",     onCanPlay);
+        audio.removeEventListener("error",       onError);
+        audio.removeEventListener("timeupdate",  onTimeUpdate);
+      };
+    } else {
+      tl = runGsapFallback();
+      return () => {
+        codeRainRef.current?.destroy();
+        hwRef.current?.destroy();
+        particleRef.current?.destroy();
+        tl?.kill();
+      };
+    }
   }, [showFinal]);
 
   const onHover = useCallback((side: "left" | "right" | "none") => {
@@ -409,6 +604,9 @@ export default function LandingPage() {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000", overflow: "hidden" }}>
 
+      {/* Hidden audio element — drop /public/voiceover.mp3 to enable */}
+      <audio ref={audioRef} src="/voiceover.mp3" preload="auto" style={{ display: "none" }} />
+
       {/* Skip */}
       <div ref={skipRef} style={{
         position: "fixed", bottom: 28, right: 32, zIndex: 100, opacity: 0,
@@ -417,39 +615,65 @@ export default function LandingPage() {
         textTransform: "uppercase",
       }}>SKIP</div>
 
+      {/* Mute / Unmute — only visible when voiceover.mp3 is available */}
+      <div ref={muteButtonRef} style={{
+        position: "fixed", bottom: 28, left: 32, zIndex: 100, opacity: 0,
+        fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.25em",
+        color: "rgba(255,255,255,0.5)", cursor: "pointer", userSelect: "none",
+        textTransform: "uppercase",
+      }} onClick={() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        mutedRef.current = !mutedRef.current;
+        audio.muted = mutedRef.current;
+        if (muteButtonRef.current)
+          muteButtonRef.current.textContent = mutedRef.current ? "[ unmute ]" : "[ mute ]";
+      }}>[ mute ]</div>
+
+      {/* Intro particle canvas — separate from the code-rain canvas */}
+      <canvas ref={particleCanvasRef} style={{
+        position: "fixed", inset: 0, width: "100%", height: "100%",
+        zIndex: 45, pointerEvents: "none",
+      }} />
+
+      {/* Seam — vertical light line during the split reveal */}
+      <div ref={seamRef} style={{
+        position: "fixed",
+        top: "10%",
+        left: "50%",
+        width: "1px",
+        height: "80%",
+        transform: "translateX(-50%) scaleY(0)",
+        transformOrigin: "center center",
+        background: "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.9) 15%, rgba(255,255,255,0.9) 85%, transparent 100%)",
+        boxShadow: "0 0 6px 2px rgba(255,255,255,0.3), 0 0 18px 4px rgba(255,255,255,0.1)",
+        zIndex: 60,
+        opacity: 0,
+        pointerEvents: "none",
+      }} />
+
       {/* ── Intro ── */}
       <div ref={introRef} style={{
-        position: "fixed", inset: 0, zIndex: 50, background: "#000",
+        position: "fixed", inset: 0, zIndex: 50, background: "transparent",
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
         pointerEvents: "none",
+        gap: "0.55em",
       }}>
         {INTRO_LINES.map((line, i) => (
           <div key={i} ref={el => { introLineRefs.current[i] = el; }} style={{
-            opacity: 0, transform: "translateY(8px)",
-            fontFamily: i === 3 ? "var(--font-mono)"
-                      : i === 4 ? "var(--font-caveat)"
-                      : "var(--font-cormorant)",
-            fontWeight: i === 3 ? 400 : i === 4 ? 600 : 300,
-            fontSize:   i === 3 ? "clamp(22px,3.5vw,44px)"
-                      : i === 4 ? "clamp(28px,4.5vw,58px)"
-                      :           "clamp(18px,2.8vw,36px)",
-            color:      i === 3 ? "#39ff14" : i === 4 ? "#f5e0b8" : "rgba(255,255,255,0.88)",
-            letterSpacing: i === 3 ? "0.06em" : "0.02em",
-            lineHeight: 1.2,
-            marginBottom: i === 3 ? "0.1em" : "0.4em",
+            opacity: 0, transform: "translateY(10px)",
+            fontFamily: "var(--font-cormorant), serif",
+            fontWeight: 300,
+            fontSize: "clamp(18px, 2.6vw, 38px)",
+            color: "rgba(255,255,255,0.9)",
+            letterSpacing: "0.06em",
+            lineHeight: 1.3,
             textAlign: "center",
+            padding: "0 clamp(24px, 8vw, 120px)",
           }}>{line}</div>
         ))}
       </div>
-
-      {/* Cursor */}
-      <div ref={cursorRef} style={{
-        position: "fixed", top: "50%", left: "50%",
-        transform: "translate(-50%,-50%)", zIndex: 40, opacity: 0,
-        fontFamily: "var(--font-mono)", fontSize: "clamp(28px,4vw,48px)",
-        color: "#fff", fontWeight: 300, pointerEvents: "none",
-      }}>|</div>
 
       {/* ══ LEFT — ENGINEER ══ */}
       <div
