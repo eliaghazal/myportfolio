@@ -32,12 +32,18 @@ const LIGHT_LEAKS = [
 
 /* ─── Cell sizes: mimics rodeo.film's varied mosaic ─── */
 const CELL_SIZES = [
+  // Row group 1: 2+1+1 = 4
   { c: 2, r: 2 }, { c: 1, r: 1 }, { c: 1, r: 1 },
+  // Row group 2: 1+1+2 = 4 (fills second row of the 2r item above + new)
+  { c: 1, r: 1 }, { c: 1, r: 1 }, { c: 2, r: 1 },
+  // Row group 3: 1+2+1 = 4
   { c: 1, r: 2 }, { c: 2, r: 1 }, { c: 1, r: 1 },
+  // Row group 4: 1+1+2 = 4 (fills second row of 2r item + new)
   { c: 1, r: 1 }, { c: 1, r: 1 }, { c: 2, r: 2 },
-  { c: 1, r: 2 }, { c: 1, r: 1 }, { c: 2, r: 1 },
-  { c: 1, r: 1 }, { c: 1, r: 1 }, { c: 2, r: 2 },
-  { c: 1, r: 1 }, { c: 2, r: 1 }, { c: 1, r: 2 },
+  // Row group 5: 2+1+1 = 4
+  { c: 2, r: 1 }, { c: 1, r: 1 }, { c: 1, r: 1 },
+  // Row group 6: 1+1+1+1 = 4
+  { c: 1, r: 1 }, { c: 1, r: 1 }, { c: 1, r: 1 }, { c: 1, r: 1 },
 ];
 
 /* ─── Floating Orbs — city lights at night ─── */
@@ -514,6 +520,7 @@ export default function GalleryPage() {
                       display: "grid",
                       gridTemplateColumns: "repeat(4, 1fr)",
                       gridAutoRows: "clamp(180px, 22vw, 320px)",
+                      gridAutoFlow: "dense",
                       gap: 2,
                       width: "max(100vw, 1600px)",
                     }}>
