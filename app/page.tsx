@@ -356,6 +356,7 @@ export default function LandingPage() {
   const interactive  = useRef(false);
   const navigating   = useRef(false);
   const mutedRef     = useRef(false);
+  const isMobileRef  = useRef(false);
 
   const showFinal = useCallback(() => {
     // Set session flag so the intro is skipped on return visits.
@@ -385,6 +386,8 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    isMobileRef.current = window.innerWidth <= 767;
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       showFinal(); return;
     }
@@ -417,12 +420,14 @@ export default function LandingPage() {
       // Pause + gather particles toward center
       particleRef.current?.startGathering();
 
-      // Seam (vertical light line) forms
+      const mobile = isMobileRef.current;
+
+      // Seam (vertical on desktop, horizontal on mobile) forms
       if (seamRef.current) {
-        gsap.set(seamRef.current, { scaleY: 0, opacity: 0 });
+        gsap.set(seamRef.current, { scaleY: mobile ? 1 : 0, scaleX: mobile ? 0 : 1, opacity: 0 });
       }
       gsap.to(seamRef.current, {
-        opacity: 1, scaleY: 1, duration: 0.5, ease: "power2.out",
+        opacity: 1, ...(mobile ? { scaleX: 1 } : { scaleY: 1 }), duration: 0.5, ease: "power2.out",
         delay: 0.4, transformOrigin: "center center",
         onComplete: () => {
           if (skipped) return;
@@ -566,6 +571,7 @@ export default function LandingPage() {
 
   const onHover = useCallback((side: "left" | "right" | "none") => {
     if (!interactive.current) return;
+    if (isMobileRef.current) return; // no expand/contract on touch screens
     const L = leftRef.current, R = rightRef.current;
     if (!L || !R) return;
     const d = 0.45, e = "power2.out";
@@ -596,8 +602,14 @@ export default function LandingPage() {
     navigating.current = true;
     const leaving  = side === "engineer" ? rightRef.current : leftRef.current;
     const entering = side === "engineer" ? leftRef.current  : rightRef.current;
-    gsap.to(leaving,  { x: side === "engineer" ? "100%" : "-100%", opacity: 0, duration: 0.55, ease: "power2.inOut" });
-    gsap.to(entering, { width: "100%", duration: 0.55, ease: "power2.inOut", onComplete: () => router.push(`/${side}`) });
+    if (isMobileRef.current) {
+      // On mobile panels stack vertically — slide out vertically
+      gsap.to(leaving,  { y: side === "engineer" ? "100%" : "-100%", opacity: 0, duration: 0.55, ease: "power2.inOut" });
+      gsap.to(entering, { height: "100%", duration: 0.55, ease: "power2.inOut", onComplete: () => router.push(`/${side}`) });
+    } else {
+      gsap.to(leaving,  { x: side === "engineer" ? "100%" : "-100%", opacity: 0, duration: 0.55, ease: "power2.inOut" });
+      gsap.to(entering, { width: "100%", duration: 0.55, ease: "power2.inOut", onComplete: () => router.push(`/${side}`) });
+    }
   }, [router]);
 
   /* ── JSX ── */
@@ -637,7 +649,7 @@ export default function LandingPage() {
       }} />
 
       {/* Seam — vertical light line during the split reveal */}
-      <div ref={seamRef} style={{
+      <div ref={seamRef} className="seam-line" style={{
         position: "fixed",
         top: "10%",
         left: "50%",
@@ -678,6 +690,7 @@ export default function LandingPage() {
       {/* ══ LEFT — ENGINEER ══ */}
       <div
         ref={leftRef}
+        className="split-left"
         onMouseEnter={() => onHover("left")}
         onMouseLeave={() => onHover("none")}
         onClick={() => onNavigate("engineer")}
@@ -728,6 +741,7 @@ export default function LandingPage() {
       {/* ══ RIGHT — POET ══ */}
       <div
         ref={rightRef}
+        className="split-right"
         onMouseEnter={() => onHover("right")}
         onMouseLeave={() => onHover("none")}
         onClick={() => onNavigate("poet")}

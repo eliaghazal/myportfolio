@@ -94,6 +94,7 @@ function PostReader({ post, onClose }: { post: Post; onClose: () => void }) {
       <div style={{
         position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 201,
         width: "clamp(320px, 52vw, 680px)",
+        maxWidth: "100vw",
         background: paper,
         boxShadow: "-8px 0 48px rgba(28,24,20,0.16)",
         transform: visible ? "translateX(0)" : "translateX(100%)",
@@ -211,7 +212,7 @@ export default function BlogPage() {
                 className="post-row"
                 data-available={String(available)}
                 onClick={() => handleOpen(post)}
-                style={{ padding: "clamp(20px,3vw,34px)", borderLeft: `2px solid ${available ? rust : border}`, background: available ? "rgba(184,92,56,0.03)" : "transparent", display: "grid", gridTemplateColumns: "60px 1fr auto", gap: "clamp(14px,3vw,38px)", alignItems: "start", marginBottom: 1, cursor: available ? "pointer" : "default" }}>
+                style={{ padding: "clamp(16px,3vw,34px)", borderLeft: `2px solid ${available ? rust : border}`, background: available ? "rgba(184,92,56,0.03)" : "transparent", display: "grid", gridTemplateColumns: "clamp(32px,5vw,60px) 1fr auto", gap: "clamp(10px,3vw,38px)", alignItems: "start", marginBottom: 1, cursor: available ? "pointer" : "default" }}>
                 <div style={{ ...mono, fontSize: 11, color: faint, paddingTop: 2 }}>{numDisplay}</div>
                 <div>
                   <div style={{ display: "flex", gap: 12, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>

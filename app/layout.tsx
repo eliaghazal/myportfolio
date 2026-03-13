@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   Cormorant_Garamond,
   Space_Grotesk,
@@ -54,6 +54,12 @@ export const metadata: Metadata = {
     title: "Elia Ghazal",
     description: "Engineer. Poet. Builder of impossible things.",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

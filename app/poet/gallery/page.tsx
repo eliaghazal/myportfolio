@@ -586,7 +586,8 @@ export default function GalleryPage() {
         ...mono, fontSize: 9, letterSpacing: "0.35em",
         color: "rgba(244,241,236,0.3)", textTransform: "uppercase",
         animation: "hintPulse 3s ease-in-out infinite",
-      }}>SCROLL AND MOVE</div>
+        whiteSpace: "nowrap",
+      }}>DRAG TO EXPLORE</div>
 
       <div style={{
         position: "fixed", bottom: 28, right: "clamp(20px,4vw,48px)",
