@@ -174,9 +174,6 @@ export default function AdminPage() {
     }
   };
 
-  // suppress "unused" warning — useEffect for any future real-time updates
-  useEffect(() => { /* admin is fully API-driven */ }, []);
-
   if (!authed) return (
     <div style={{ background: bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-space)" }}>
       <div style={{ width: 340, padding: "40px 36px", background: surface, border: `1px solid ${border}` }}>

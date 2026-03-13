@@ -15,19 +15,13 @@ export async function GET() {
       headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
     }
 
-    const [userRes, reposRes, eventsRes] = await Promise.all([
+    const [userRes, reposRes] = await Promise.all([
       fetch("https://api.github.com/users/eliaghazal", { headers }),
       fetch("https://api.github.com/users/eliaghazal/repos?per_page=100", { headers }),
-      fetch("https://api.github.com/users/eliaghazal/events/public?per_page=10", { headers }),
     ]);
 
     const user = await userRes.json();
-    const repos: Array<{ stargazers_count: number; language: string | null; fork: boolean }> = await reposRes.json();
-    const events: Array<{ type: string; repo: { name: string }; created_at: string; payload: { commits?: Array<{ message: string }> } }> = await eventsRes.json();
-
-    const totalStars = Array.isArray(repos)
-      ? repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0)
-      : 0;
+    const repos: Array<{ stargazers_count: number; language: string | null; fork: boolean; size: number }> = await reposRes.json();
 
     // Language frequency from non-fork repos
     const langMap: Record<string, number> = {};
@@ -41,21 +35,11 @@ export async function GET() {
       .slice(0, 5)
       .map(([lang]) => lang);
 
-    // Recent activity — pushes and PRs
-    const recentActivity = Array.isArray(events)
-      ? events
-          .filter(e => ["PushEvent", "PullRequestEvent", "CreateEvent"].includes(e.type))
-          .slice(0, 5)
-          .map(e => ({
-            type: e.type,
-            repo: e.repo?.name,
-            date: e.created_at,
-            message:
-              e.type === "PushEvent"
-                ? e.payload?.commits?.[0]?.message ?? null
-                : null,
-          }))
-      : [];
+    // Approximate lines of code: total repo size (KB) × 30 lines/KB
+    const totalSizeKB = Array.isArray(repos)
+      ? repos.filter(r => !r.fork).reduce((sum, r) => sum + (r.size || 0), 0)
+      : 0;
+    const totalLinesApprox = Math.round(totalSizeKB * 30);
 
     const memberSince = user.created_at
       ? new Date(user.created_at).getFullYear()
@@ -63,11 +47,9 @@ export async function GET() {
 
     const data = {
       publicRepos: user.public_repos ?? 0,
-      totalStars,
+      totalLinesApprox,
       memberSince,
       topLanguages,
-      recentActivity,
-      followers: user.followers ?? 0,
     };
 
     CACHE.data = data;

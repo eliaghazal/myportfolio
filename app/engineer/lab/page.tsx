@@ -50,95 +50,6 @@ function useFade(delay = 0) {
    DEMOS
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Caesar Cipher ── */
-function CaesarDemo() {
-  const [input, setInput]   = useState("Hello World");
-  const [shift, setShift]   = useState(3);
-  const [mode, setMode]     = useState<"encrypt" | "crack">("encrypt");
-  const [crackInput, setCrackInput] = useState("");
-
-  const ENGLISH_FREQ: Record<string, number> = { a:8.2,b:1.5,c:2.8,d:4.3,e:12.7,f:2.2,g:2.0,h:6.1,i:7.0,j:0.2,k:0.8,l:4.0,m:2.4,n:6.7,o:7.5,p:1.9,q:0.1,r:6.0,s:6.3,t:9.1,u:2.8,v:1.0,w:2.4,x:0.2,y:2.0,z:0.1 };
-
-  const caesar = (str: string, n: number): string =>
-    str.split("").map(c => {
-      if (/[a-zA-Z]/.test(c)) {
-        const base = c >= "a" ? 97 : 65;
-        return String.fromCharCode(((c.charCodeAt(0) - base + n + 26) % 26) + base);
-      }
-      return c;
-    }).join("");
-
-  const scoreLikelihood = (str: string): number => {
-    const lower = str.toLowerCase();
-    let score = 0;
-    for (const ch of lower) { if (ENGLISH_FREQ[ch]) score += ENGLISH_FREQ[ch]; }
-    return score / (str.length || 1);
-  };
-
-  const allCracks = Array.from({ length: 26 }, (_, i) => {
-    const decrypted = caesar(crackInput || "Type ciphertext above", i);
-    return { shift: i, text: decrypted, score: scoreLikelihood(decrypted) };
-  }).sort((a, b) => b.score - a.score);
-
-  const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
-
-  return (
-    <div style={{ ...mono, fontSize: 13, color: white }}>
-      {/* Mode toggle */}
-      <div style={{ display: "flex", gap: 1, marginBottom: 20 }}>
-        {(["encrypt", "crack"] as const).map(m => (
-          <button key={m} onClick={() => setMode(m)}
-            style={{ padding: "6px 18px", background: mode === m ? gn : "transparent", border: `1px solid ${border}`, color: mode === m ? black : gnDim, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            {m === "encrypt" ? "Encrypt / Decrypt" : "Crack it"}
-          </button>
-        ))}
-      </div>
-
-      {mode === "encrypt" ? (
-        <>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, color: gnDim, letterSpacing: "0.2em", marginBottom: 6 }}>INPUT TEXT</div>
-            <input value={input} onChange={e => setInput(e.target.value)}
-              style={{ width: "100%", background: "rgba(57,255,20,0.04)", border: `1px solid ${border}`, color: white, padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, color: gnDim, letterSpacing: "0.2em", marginBottom: 6 }}>SHIFT: {shift}</div>
-            <input type="range" min={0} max={25} value={shift} onChange={e => setShift(Number(e.target.value))}
-              style={{ width: "100%", accentColor: gn }} />
-          </div>
-          <div style={{ background: "rgba(57,255,20,0.04)", border: `1px solid ${border}`, padding: "14px 16px", marginBottom: 12 }}>
-            <div style={{ fontSize: 10, color: gnDim, letterSpacing: "0.2em", marginBottom: 6 }}>ENCRYPTED</div>
-            <div style={{ color: gn, wordBreak: "break-all", lineHeight: 1.6 }}>{caesar(input, shift)}</div>
-          </div>
-          <div style={{ background: "rgba(57,255,20,0.04)", border: `1px solid ${border}`, padding: "14px 16px" }}>
-            <div style={{ fontSize: 10, color: gnDim, letterSpacing: "0.2em", marginBottom: 6 }}>DECRYPTED (shift back)</div>
-            <div style={{ color: gnDim, wordBreak: "break-all", lineHeight: 1.6 }}>{caesar(caesar(input, shift), 26 - shift)}</div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, color: gnDim, letterSpacing: "0.2em", marginBottom: 6 }}>PASTE CIPHERTEXT</div>
-            <input value={crackInput} onChange={e => setCrackInput(e.target.value)}
-              placeholder="Paste encrypted text here…"
-              style={{ width: "100%", background: "rgba(57,255,20,0.04)", border: `1px solid ${border}`, color: white, padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-          </div>
-          <div style={{ fontSize: 10, color: gnDim, letterSpacing: "0.2em", marginBottom: 10 }}>ALL 26 SHIFTS — RANKED BY ENGLISH PROBABILITY</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 300, overflowY: "auto" }}>
-            {allCracks.map((c, i) => (
-              <div key={c.shift} style={{ display: "grid", gridTemplateColumns: "40px 50px 1fr", gap: 10, alignItems: "start", padding: "6px 10px", background: i === 0 ? "rgba(57,255,20,0.08)" : "transparent", border: i === 0 ? `1px solid ${border}` : "1px solid transparent" }}>
-                <span style={{ color: i === 0 ? gn : faint, fontSize: 10 }}>#{i + 1}</span>
-                <span style={{ color: gnDim, fontSize: 10 }}>shift {c.shift}</span>
-                <span style={{ color: i === 0 ? white : dim, fontSize: 12, wordBreak: "break-all", lineHeight: 1.4 }}>{c.text.slice(0, 80)}{c.text.length > 80 ? "…" : ""}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 /* ── Sorting Visualizer ── */
 function SortingDemo() {
   const SIZE = 30;
@@ -257,129 +168,10 @@ function SortingDemo() {
   );
 }
 
-/* ── DFA Visualizer ── */
-function DFADemo() {
-  const [states, setStates] = useState([{ id: "q0", x: 80, y: 100, accepting: false }, { id: "q1", x: 240, y: 100, accepting: true }]);
-  const [transitions] = useState([{ from: "q0", to: "q1", symbol: "a" }, { from: "q1", to: "q1", symbol: "b" }, { from: "q0", to: "q0", symbol: "b" }]);
-  const [testStr, setTestStr]   = useState("aab");
-  const [result, setResult]     = useState<null | boolean>(null);
-  const [stateCounter, setStateCounter] = useState(2);
-
-  const addState = () => {
-    const id = `q${stateCounter}`;
-    setStates(prev => [...prev, { id, x: 80 + (stateCounter % 4) * 120, y: 100 + Math.floor(stateCounter / 4) * 80, accepting: false }]);
-    setStateCounter(c => c + 1);
-  };
-
-  const toggleAccept = (id: string) => {
-    setStates(prev => prev.map(s => s.id === id ? { ...s, accepting: !s.accepting } : s));
-  };
-
-  const runDFA = () => {
-    if (states.length === 0) return;
-    let current = states[0].id;
-    for (const ch of testStr) {
-      const t = transitions.find(t => t.from === current && t.symbol === ch);
-      if (!t) { setResult(false); return; }
-      current = t.to;
-    }
-    const finalState = states.find(s => s.id === current);
-    setResult(finalState?.accepting ?? false);
-  };
-
-  const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
-  const purple = "#a78bfa";
-
-  return (
-    <div style={{ ...mono, fontSize: 13, color: white }}>
-      {/* DFA Canvas */}
-      <svg width="100%" height="200" style={{ background: "rgba(167,139,250,0.03)", border: `1px solid rgba(167,139,250,0.15)`, marginBottom: 14, display: "block" }}>
-        {/* Transitions */}
-        {transitions.map((t, i) => {
-          const from = states.find(s => s.id === t.from);
-          const to   = states.find(s => s.id === t.to);
-          if (!from || !to) return null;
-          if (from.id === to.id) {
-            return (
-              <g key={i}>
-                <path d={`M ${from.x} ${from.y - 20} Q ${from.x + 40} ${from.y - 60} ${from.x} ${from.y - 20}`} fill="none" stroke={purple} strokeWidth={1.5} opacity={0.5} markerEnd="url(#arrow)" />
-                <text x={from.x + 42} y={from.y - 45} fill={purple} fontSize={11} fontFamily="var(--font-mono)" opacity={0.8}>{t.symbol}</text>
-              </g>
-            );
-          }
-          const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
-          return (
-            <g key={i}>
-              <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={purple} strokeWidth={1.5} opacity={0.5} markerEnd="url(#arrow)" />
-              <text x={mx} y={my - 8} fill={purple} fontSize={11} fontFamily="var(--font-mono)" textAnchor="middle" opacity={0.8}>{t.symbol}</text>
-            </g>
-          );
-        })}
-        {/* Arrow marker */}
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="8" refX="8" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L8,3 z" fill={purple} opacity={0.7} />
-          </marker>
-        </defs>
-        {/* States */}
-        {states.map(s => (
-          <g key={s.id} onClick={() => toggleAccept(s.id)} style={{ cursor: "pointer" }}>
-            {s === states[0] && <polygon points={`${s.x - 42},${s.y - 12} ${s.x - 24},${s.y} ${s.x - 42},${s.y + 12}`} fill={purple} opacity={0.4} />}
-            <circle cx={s.x} cy={s.y} r={22} fill="rgba(167,139,250,0.08)" stroke={purple} strokeWidth={s.accepting ? 2.5 : 1.5} opacity={0.85} />
-            {s.accepting && <circle cx={s.x} cy={s.y} r={17} fill="none" stroke={purple} strokeWidth={1} opacity={0.5} />}
-            <text x={s.x} y={s.y + 5} textAnchor="middle" fill={purple} fontSize={12} fontFamily="var(--font-mono)">{s.id}</text>
-          </g>
-        ))}
-      </svg>
-
-      {/* Controls */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <button onClick={addState} style={{ padding: "5px 12px", background: "transparent", border: "1px solid rgba(167,139,250,0.3)", color: purple, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.12em" }}>+ STATE</button>
-        <div style={{ fontSize: 10, color: "rgba(167,139,250,0.6)", marginLeft: 6, lineHeight: 1.6 }}>Click state to toggle accept. {states.length} states, {transitions.length} transitions.</div>
-      </div>
-
-      {/* Test string */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-        <input value={testStr} onChange={e => { setTestStr(e.target.value); setResult(null); }}
-          style={{ flex: 1, background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.2)", color: white, padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: 13, outline: "none" }}
-          placeholder="Test string…" />
-        <button onClick={runDFA} style={{ padding: "8px 18px", background: purple, border: "none", color: "#0a0a0a", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase" }}>Run</button>
-      </div>
-      {result !== null && (
-        <div style={{ padding: "10px 14px", background: result ? "rgba(57,255,20,0.08)" : "rgba(200,50,50,0.08)", border: `1px solid ${result ? "rgba(57,255,20,0.3)" : "rgba(200,50,50,0.3)"}`, fontFamily: "var(--font-mono)", fontSize: 12, color: result ? gn : "#c45050" }}>
-          {result ? `"${testStr}" is ACCEPTED ✓` : `"${testStr}" is REJECTED ✗`}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ═══════════════════════════════════════════════════════════════
    SEED EXPERIMENTS
 ═══════════════════════════════════════════════════════════════ */
 const SEED_EXPERIMENTS: Experiment[] = [
-  {
-    id: "caesar",
-    title: "Caesar Cipher Playground",
-    description: "Interactive Caesar cipher: type text, slide the shift, watch it encrypt live. Crack mode brute-forces all 26 shifts and ranks results by English letter frequency probability.",
-    category: "Cryptography",
-    tech: ["Python", "Cryptography", "AI-assisted analysis"],
-    github: "https://github.com/TwoFoundersLab/Crypto",
-    status: "LIVE",
-    accent: "#39ff14",
-    demo: <CaesarDemo />,
-  },
-  {
-    id: "dfa",
-    title: "DFA Minimizer Visualizer",
-    description: "A visual DFA builder powered by Hopcroft's algorithm. Add states, define transitions, test strings, and watch the automaton accept or reject — all in the browser.",
-    category: "Theory of Computation",
-    tech: ["C++", "Qt 6", "Hopcroft Algorithm", "Automata Theory"],
-    github: "https://github.com/TwoFoundersLab/DFA_Minimization",
-    status: "DEMO",
-    accent: "#a78bfa",
-    demo: <DFADemo />,
-  },
   {
     id: "sorting",
     title: "Sorting Algorithm Visualizer",
@@ -534,6 +326,18 @@ export default function LabPage() {
             <ExperimentCard key={exp.id} exp={exp} accent={exp.accent} />
           ))}
         </div>
+
+        {/* More to come */}
+        {dbExps.length === 0 && (
+          <div style={{ padding: "32px 28px", border: `1px dashed ${border}`, textAlign: "center" }}>
+            <div style={{ ...mono, fontSize: 11, letterSpacing: "0.3em", color: gnDim, marginBottom: 10 }}>
+              MORE EXPERIMENTS COMING SOON
+            </div>
+            <p style={{ color: faint, fontSize: 13, lineHeight: 1.7, maxWidth: 400, margin: "0 auto" }}>
+              Caesar Cipher Playground, DFA Minimizer Visualizer, and more are currently in the pipeline.
+            </p>
+          </div>
+        )}
 
         {/* DB experiments */}
         {dbExps.length > 0 && (

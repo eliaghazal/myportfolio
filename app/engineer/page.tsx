@@ -417,10 +417,16 @@ function TerminalSection() {
   const [cmdHistory, setCmdHistory] = useState<string[]>([]);
   const [histIdx, setHistIdx]     = useState(-1);
   const inputRef                  = useRef<HTMLInputElement>(null);
-  const bottomRef                 = useRef<HTMLDivElement>(null);
+  const outputRef                 = useRef<HTMLDivElement>(null);
+  const mountedRef                = useRef(false);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Skip the very first render so the page doesn't jump to the terminal on load.
+    // On subsequent renders (a command was entered), scroll only within the output container.
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
   }, [history]);
 
   const run = useCallback((raw: string) => {
@@ -495,7 +501,7 @@ function TerminalSection() {
             </div>
 
             {/* Output area */}
-            <div style={{ padding: "20px 24px", minHeight: 260, maxHeight: 360, overflowY: "auto", cursor: "text" }}>
+            <div ref={outputRef} style={{ padding: "20px 24px", minHeight: 260, maxHeight: 360, overflowY: "auto", cursor: "text" }}>
               {history.map((entry, i) => (
                 <div key={i}>
                   {entry.cmd && (
@@ -523,7 +529,6 @@ function TerminalSection() {
                 />
                 <span style={{ animation: "blink 1s step-end infinite", color: gn, ...mono, fontSize: 13, marginLeft: -2 }}>█</span>
               </div>
-              <div ref={bottomRef} />
             </div>
           </div>
         </div>
@@ -537,29 +542,9 @@ function TerminalSection() {
 ═══════════════════════════════════════════════════════════════ */
 interface GitHubStats {
   publicRepos: number;
-  totalStars: number;
+  totalLinesApprox: number;
   memberSince: number | null;
   topLanguages: string[];
-  recentActivity: Array<{ type: string; repo: string; date: string; message: string | null }>;
-  followers: number;
-}
-
-function formatEvent(e: GitHubStats["recentActivity"][0]): string {
-  const repoShort = e.repo?.split("/")[1] ?? e.repo;
-  if (e.type === "PushEvent") return `pushed to ${repoShort}${e.message ? `: "${e.message.slice(0,40)}"` : ""}`;
-  if (e.type === "PullRequestEvent") return `pull request on ${repoShort}`;
-  if (e.type === "CreateEvent") return `created ${repoShort}`;
-  return `activity on ${repoShort}`;
-}
-
-function timeAgo(iso: string): string {
-  const diff = new Date().getTime() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
 }
 
 function BuildInPublic() {
@@ -620,10 +605,9 @@ function BuildInPublic() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px,1fr))", gap: 2 }}>
               {/* Stats cards */}
               {[
-                { label: "Public Repos",  value: String(stats.publicRepos), accent: gn },
-                { label: "Total Stars",   value: String(stats.totalStars),  accent: "#f59e0b" },
-                { label: "Followers",     value: String(stats.followers),   accent: "#a78bfa" },
-                { label: "Member Since",  value: stats.memberSince ? String(stats.memberSince) : "—", accent: "#60a5fa" },
+                { label: "Public Repos",      value: String(stats.publicRepos), accent: gn },
+                { label: "Approx. Lines of Code", value: stats.totalLinesApprox >= 1000 ? `~${Math.round(stats.totalLinesApprox / 1000)}k` : `~${stats.totalLinesApprox}`, accent: "#f59e0b" },
+                { label: "Member Since",      value: stats.memberSince ? String(stats.memberSince) : "—", accent: "#60a5fa" },
               ].map(s => (
                 <div key={s.label} style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", borderBottom: `2px solid ${s.accent}30`, transition: "border-color 0.25s" }}
                   onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderBottomColor = s.accent}
@@ -635,26 +619,11 @@ function BuildInPublic() {
 
               {/* Top languages */}
               {stats.topLanguages.length > 0 && (
-                <div style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", gridColumn: "span 2" }}>
+                <div style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", gridColumn: "span 3" }}>
                   <div style={{ ...mono, fontSize: 9, letterSpacing: "0.22em", color: "rgba(255,255,255,0.3)", marginBottom: 14, textTransform: "uppercase" }}>Top Languages</div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {stats.topLanguages.map((lang, i) => (
                       <span key={lang} style={{ ...mono, fontSize: 11, padding: "4px 12px", background: `rgba(57,255,20,${0.12 - i * 0.015})`, color: gn, border: "1px solid rgba(57,255,20,0.2)" }}>{lang}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recent activity */}
-              {stats.recentActivity.length > 0 && (
-                <div style={{ padding: "22px 20px", background: "#080808", border: "1px solid rgba(255,255,255,0.05)", gridColumn: "span 2" }}>
-                  <div style={{ ...mono, fontSize: 9, letterSpacing: "0.22em", color: "rgba(255,255,255,0.3)", marginBottom: 14, textTransform: "uppercase" }}>Recent Activity</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {stats.recentActivity.map((e, i) => (
-                      <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                        <span style={{ ...mono, fontSize: 10, color: "rgba(57,255,20,0.4)", flexShrink: 0, minWidth: 70 }}>{timeAgo(e.date)}</span>
-                        <span style={{ ...mono, fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>{formatEvent(e)}</span>
-                      </div>
                     ))}
                   </div>
                 </div>
@@ -1076,6 +1045,52 @@ export default function EngineerPage() {
                     ))}
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── LAB TEASER ── */}
+      <section style={{ padding:"clamp(40px,6vw,72px) clamp(24px,8vw,120px)", background:"#000",
+        borderTop:"1px solid rgba(57,255,20,0.1)" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <div style={{ border:"1px solid rgba(57,255,20,0.22)", background:"rgba(57,255,20,0.02)",
+            padding:"clamp(28px,4vw,52px)",
+            display:"grid", gridTemplateColumns:"1fr auto", gap:"clamp(24px,4vw,48px)", alignItems:"center" }}>
+            <div>
+              <div style={{ ...mono, fontSize:10, letterSpacing:"0.3em", color:"rgba(57,255,20,0.65)",
+                marginBottom:14, textTransform:"uppercase" }}>{"// Lab · Experiments"}</div>
+              <h2 style={{ fontWeight:700, fontSize:"clamp(22px,3vw,40px)", letterSpacing:"-0.02em",
+                marginBottom:16, lineHeight:1.15 }}>
+                The <span style={{ color:"#39ff14" }}>Engineering Playground</span>
+              </h2>
+              <p style={{ color:"rgba(255,255,255,0.45)", fontSize:"clamp(13px,1.1vw,15px)", lineHeight:1.8,
+                marginBottom:28, maxWidth:480 }}>
+                Interactive experiments and algorithm visualizers — all running live in your browser.
+                Currently featuring a <span style={{ color:"rgba(57,255,20,0.75)" }}>Sorting Algorithm Visualizer</span>{" "}
+                (Bubble, Quick, Merge). More experiments coming soon.
+              </p>
+              <Link href="/engineer/lab" style={{ ...mono, fontSize:11, letterSpacing:"0.22em",
+                color:"#000", background:"#39ff14", padding:"12px 28px",
+                textDecoration:"none", display:"inline-block", textTransform:"uppercase",
+                transition:"opacity 0.2s, box-shadow 0.2s", boxShadow:"0 0 0 rgba(57,255,20,0)" }}
+                onMouseEnter={e=>{
+                  e.currentTarget.style.opacity="0.88";
+                  e.currentTarget.style.boxShadow="0 0 24px rgba(57,255,20,0.4)";
+                }}
+                onMouseLeave={e=>{
+                  e.currentTarget.style.opacity="1";
+                  e.currentTarget.style.boxShadow="0 0 0 rgba(57,255,20,0)";
+                }}
+              >EXPLORE THE LAB ↗</Link>
+            </div>
+            {/* Mini bar-chart preview */}
+            <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:80, width:140,
+              padding:"0 4px", flexShrink:0, opacity:0.7 }}>
+              {[45,82,23,67,38,91,55,74,30,60,85,20,50,70,40].map((h, i) => (
+                <div key={i} style={{ flex:1, height:`${h}%`,
+                  background:`rgba(57,255,20,${0.25 + (h/100)*0.5})` }} />
               ))}
             </div>
           </div>
