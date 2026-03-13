@@ -6,6 +6,7 @@ import {
   Lora,
   Caveat,
 } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -66,6 +67,7 @@ export default function RootLayout({
         className={`${cormorant.variable} ${spaceGrotesk.variable} ${ibmMono.variable} ${lora.variable} ${caveat.variable}`}
       >
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
