@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { DEFAULT_HERO_LINES, DEFAULT_POEMS, type Poem } from "@/lib/defaults";
 
 /* ─── Palette ─────────────────────────────────────────── */
 const ink    = "#1c1814";
@@ -12,248 +13,6 @@ const dim    = "rgba(28,24,20,0.42)";
 const faint  = "rgba(28,24,20,0.14)";
 const border = "rgba(28,24,20,0.1)";
 
-/* ─── Poems (real content from the book) ─────────────── */
-const HERO_LINES = [
-  "Come all,\nwe're witnessing\nthe eclipse.",
-  "The sun tries\nher best\nbut never listens.",
-  "I am bound\nby an invisible thread,\nnot to another,\nbut to my own soul.",
-  "You're the sun,\nand I am the moon —\ntogether we're the eclipse.",
-  "Land of God,\nwe will return\nto reclaim you.",
-];
-
-const POEMS = [
-  {
-    title: "Behind My Brown Doe Eyes",
-    year: "2021",
-    theme: "Identity",
-    lines: `Behind my brown doe eyes,
-Waterfalls cascade,
-Creating rivers flowing out,
-Drowning thoughts and emotions.
-
-Behind my brown doe eyes,
-A spark flickers,
-A tiny light in my mind,
-Slowly fading in the rivers.
-
-Behind my brown doe eyes,
-Untold truths lie,
-Unfolded relationships,
-Sunken ships of love and sense,
-And hatred for the creator of my waterfalls.
-
-Behind my brown doe eyes,
-Hotels for demons reside,
-Though they appear as angels outside,
-Inside, they thrive on my red-drawn lines.
-
-Oh, to forget the past,
-And rid myself of demons,
-But that would end me.
-
-Behind my brown doe eyes,
-Scenes unseen,
-Scenes to be forgotten,
-Scenes from childhood,
-Scenes from life —
-Remind me,
-You were never good enough.
-
-Behind my brown doe eyes,
-A shattered heart beats,
-Longing to love,
-A forbidden love,
-A love I feared.
-
-Everywhere I go,
-I want to disappear.`,
-  },
-  {
-    title: "The Ghost of Town",
-    year: "2021",
-    theme: "Isolation · Home",
-    lines: `The sun tries her best but never listens,
-The moon reaches out, but the phone is dusty now.
-
-I grew up in a little town in the East,
-Where everyone knows each other, but no one knows,
-The ghost of town that paces around,
-Lurking by lit houses,
-Wondering why it is the way it is.
-
-I threw my old spirit inside a dungeon,
-All four walls with listening ears,
-They heard my soul's screams every night,
-The roof the only view my eyes laid on,
-A trail forever engraved.
-
-Doe eyes,
-Looking up,
-Hands together, knees on the ground,
-Asking if there's a God listening around.
-
-I am someone's son, someone's daughter,
-I am the breath you take after death.
-
-Come all,
-We're witnessing the eclipse.
-Come all,
-It's happened once and for all.
-Come all,
-I am the ghost of town.`,
-  },
-  {
-    title: "Circle of Love",
-    year: "2022",
-    theme: "Love · Celestial",
-    lines: `You're the sun, and I am the moon,
-Together we're the eclipse,
-Casting shadows and mystery in our wake.
-
-Together we watch them stare at our indescribable beauty,
-Something they have never seen before,
-Something so elusive,
-Something so enshrouded in love.
-
-You shine in my darkness,
-A beacon in the void,
-And we create a celestial dance,
-Blinding everyone with our love.
-
-A love that weaves through the night,
-Binding us in a circle of eternal enchantment,
-As we disappear into the abyss,
-Leaving the world to wonder at our enigmatic union.`,
-  },
-  {
-    title: "Invisible Thread",
-    year: "2022",
-    theme: "Friendship · Soul",
-    lines: `As the Chinese proverb goes:
-"An invisible red thread
-connects those destined
-to meet, despite the time,
-the place, despite the
-circumstances. The thread
-can be tightened or tangled,
-but never be broken."
-
-I found mine, he's a tapestry of contradictions,
-A jester with hidden sorrows,
-A gentle hand that sometimes slips.
-No matter who he is, I found him.
-
-Through infernos, we marched together,
-Drew the constellations of our lives,
-Watched the cosmos unfold under night skies,
-Shared laughter that echoed through time.
-
-He was my guardian when I was young,
-My light in darkness, my calm in storms,
-Unwavering through every twilight.
-
-And that's when I realized,
-I am bound by an invisible thread,
-not to another,
-But to my own soul.`,
-  },
-  {
-    title: "Land of God",
-    year: "2023",
-    theme: "Lebanon · Identity",
-    lines: `The scriptures have mentioned your name,
-Yet they still managed to steal that away.
-
-Land of God,
-Cedars so tall and resilient,
-No storm can make you fall.
-
-Land of God,
-Begging on my knees, hands raised to the sky,
-Stay strong and safe from these so-called criminals.
-Let them be,
-But don't let them in.
-
-Land of God,
-There's still hope for your branches, still intact,
-Hopefully not divided
-By these two-faced deceivers.
-
-Land of God,
-I am weary of calling out your name,
-Just to check if you're still okay.
-
-We will remain within you,
-Even if we are apart from you.
-
-Land of God,
-We will return to reclaim you.`,
-  },
-  {
-    title: "Oh Sea",
-    year: "2022",
-    theme: "Solitude · Peace",
-    lines: `Oh sea, how calm you can be,
-Oh sea, how loud you can be.
-
-No one sees, how deep you can be,
-No one feels, how cold you can be.
-
-Oh sea, how much I see myself in you.
-Oh sea, they all think I'm calm and clean,
-They don't see the struggles I fear,
-From drowning inside your deep blue waves.
-
-I wonder, while I'm drowning,
-Will I at least get goodbye waves?
-Or will I merge into your waves and be forgotten?
-
-Oh my sea, each night before I sleep,
-I taste your salty water on my cheeks.
-
-Oh my dear sea,
-Thank you for never leaving me,
-Thank you for letting me sleep,
-Even in my sleepless nights.`,
-  },
-  {
-    title: "In Another Life",
-    year: "2022",
-    theme: "Love · Loss",
-    lines: `In another life,
-Maybe our love would be alive.
-
-In this life,
-We never were in love,
-But lived for its illusion,
-Grasping at the hope of it.
-
-We were actors,
-Deceiving everyone with our charade,
-So convincingly we deceived ourselves.
-
-Now our memories gather dust on old shelves
-In our abandoned house.
-
-In another life,
-I hope our act was no masquerade.
-I hope our love was genuine,
-Enduring the trials.
-
-Maybe we'd be in Paris,
-Dancing barefoot under the Eiffel Tower,
-Our favorite playlist playing,
-As the lights twinkle,
-Mirroring our spark,
-Like a Supernova.
-
-But until then…
-I remain here,
-Living with the solace that we share the same sky,
-Gazing at the same moon,
-Wishing under the same stars.`,
-  },
-];
 
 /* ─── Hooks ───────────────────────────────────────────── */
 function makeObs(cb: () => void) {
@@ -300,15 +59,28 @@ export default function PoetPage() {
   const [heroVisible, setHeroVisible] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [activePoem, setActivePoem] = useState(0);
+  const [poems, setPoems] = useState<Poem[]>(DEFAULT_POEMS);
+  const [heroLines, setHeroLines] = useState<string[]>(DEFAULT_HERO_LINES);
+
+  /* Load content from DB (falls back to defaults above if DB is empty) */
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/admin/settings?key=poems").then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/admin/settings?key=hero_lines").then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([po, hl]) => {
+      if (po?.value) try { setPoems(JSON.parse(po.value)); } catch { /* keep defaults */ }
+      if (hl?.value) try { setHeroLines(JSON.parse(hl.value)); } catch { /* keep defaults */ }
+    });
+  }, []);
 
   /* Hero line cycling */
   useEffect(() => {
     const interval = setInterval(() => {
       setHeroVisible(false);
-      setTimeout(() => { setHeroIdx(i => (i + 1) % HERO_LINES.length); setHeroVisible(true); }, 500);
+      setTimeout(() => { setHeroIdx(i => (i + 1) % heroLines.length); setHeroVisible(true); }, 500);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [heroLines.length]);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 56);
@@ -330,7 +102,6 @@ export default function PoetPage() {
 
   const sec: React.CSSProperties = { padding: "88px clamp(24px, 8vw, 120px)" };
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
-  const space: React.CSSProperties = { fontFamily: "var(--font-space)" };
 
   return (
     <div style={{ background: paper, color: ink, minHeight: "100vh", fontFamily: "var(--font-space)", overflowX: "hidden" }}>
@@ -357,7 +128,7 @@ export default function PoetPage() {
         transition: "background 0.35s, border-color 0.35s",
       }}>
         <Link href="/" className="nav-link" style={{ ...mono, fontSize: 11, letterSpacing: "0.2em", color: dim, textDecoration: "none", transition: "color 0.2s" }}>← HOME</Link>
-        <div style={{ display: "flex", gap: "clamp(18px,2.5vw,36px)" }}>
+        <div style={{ display: "flex", gap: "clamp(12px,2vw,28px)", alignItems: "center" }}>
           {["about", "book", "poems", "contact"].map(id => (
             <button key={id} onClick={() => scrollTo(id)} className="nav-link" style={{
               background: "none", border: "none", cursor: "pointer",
@@ -365,6 +136,16 @@ export default function PoetPage() {
               textTransform: "uppercase", padding: "4px 0", transition: "color 0.2s",
             }}>{id}</button>
           ))}
+          <a href="/api/cv" target="_blank" rel="noopener noreferrer" className="nav-link" style={{
+            ...mono, fontSize: 10, letterSpacing: "0.2em", color: rust,
+            textDecoration: "none", padding: "5px 12px",
+            border: `1px solid rgba(184,92,56,0.3)`,
+            transition: "border-color 0.2s, color 0.2s",
+            textTransform: "uppercase",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = rust; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(184,92,56,0.3)"; }}
+          >CV ↓</a>
         </div>
       </nav>
 
@@ -392,7 +173,7 @@ export default function PoetPage() {
           marginBottom: "clamp(28px,4vw,48px)",
           maxWidth: "85vw",
         }}>
-          {HERO_LINES[heroIdx]}
+          {heroLines[heroIdx]}
         </div>
 
         {/* Name + meta */}
@@ -456,7 +237,7 @@ export default function PoetPage() {
                 ["Published", "2024 · Ukiyoto"],
                 ["Poems", "27 pieces"],
                 ["Written", "Ages 15–19"],
-                ["Available", "Amazon UK"],
+                ["Available", "All Stores"],
               ].map(([k, v]) => (
                 <div key={k} style={{ padding: "16px 14px", background: "rgba(28,24,20,0.03)", border: `1px solid ${border}` }}>
                   <div style={{ ...mono, fontSize: 9, letterSpacing: "0.18em", color: rustDim, marginBottom: 4, textTransform: "uppercase" }}>{k}</div>
@@ -474,24 +255,20 @@ export default function PoetPage() {
       <section id="book" style={{ ...sec, background: ink, borderBottom: `1px solid rgba(244,241,236,0.08)` }}>
         <div ref={bookRef} style={{ maxWidth: 1060, margin: "0 auto", display: "grid", gridTemplateColumns: "auto 1fr", gap: "clamp(32px,5vw,64px)", alignItems: "center" }}>
 
-          {/* Typographic book cover — inverted */}
-          <div style={{
-            width: "clamp(130px,14vw,180px)", aspectRatio: "3/4",
-            background: paper, color: ink,
-            display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", padding: "20px 18px",
-            boxShadow: "12px 12px 40px rgba(0,0,0,0.4)",
-            flexShrink: 0, position: "relative",
-          }}>
-            <div style={{ ...mono, fontSize: 8, letterSpacing: "0.5em", color: rustDim, marginBottom: 14, textTransform: "uppercase" }}>Ukiyoto · 2024</div>
-            <div style={{ borderTop: `1px solid ${faint}`, width: "100%", marginBottom: 14 }} />
-            <div style={{ fontWeight: 700, fontSize: "clamp(10px,1.2vw,13px)", textAlign: "center", lineHeight: 1.35, marginBottom: 14, letterSpacing: "-0.01em" }}>
-              WHISPERS<br />OF THE<br />ECLIPSE
-            </div>
-            <div style={{ borderBottom: `1px solid ${faint}`, width: "100%", marginBottom: 14 }} />
-            <div style={{ fontSize: "clamp(8px,0.9vw,10px)", letterSpacing: "0.1em", color: dim, textAlign: "center" }}>Elia Alghazal</div>
-            <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, textAlign: "center", ...mono, fontSize: 8, letterSpacing: "0.3em", color: rustDim }}>A · E · C · L</div>
-          </div>
+          {/* Book cover image */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/book-cover.png"
+            alt="Whispers of the Eclipse — Elia Alghazal"
+            style={{
+              width: "clamp(130px,14vw,180px)",
+              aspectRatio: "3/4",
+              objectFit: "cover",
+              boxShadow: "12px 12px 40px rgba(0,0,0,0.4)",
+              flexShrink: 0,
+              display: "block",
+            }}
+          />
 
           {/* Book info — on dark bg */}
           <div style={{ color: paper }}>
@@ -505,7 +282,7 @@ export default function PoetPage() {
             <p style={{ fontSize: "clamp(12px,1.2vw,14px)", color: "rgba(244,241,236,0.55)", lineHeight: 1.9, marginBottom: 32, maxWidth: 480 }}>
               A Love, Loss, and Identity collection — published by Ukiyoto Publishing in 2024.
             </p>
-            <a href="https://www.amazon.co.uk/Whispers-Eclipse-Elia-Ghazal/dp/9367950519"
+            <a href="https://linktr.ee/eliaghazal"
               target="_blank" rel="noopener noreferrer" style={{
                 ...mono, fontSize: 11, letterSpacing: "0.2em",
                 padding: "13px 32px", background: rust, color: paper,
@@ -514,7 +291,7 @@ export default function PoetPage() {
               }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.82")}
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-            >Get it on Amazon ↗</a>
+            >Get the Book ↗</a>
           </div>
         </div>
       </section>
@@ -534,7 +311,7 @@ export default function PoetPage() {
           <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 2 }}>
             {/* Left rail — poem selector */}
             <div style={{ borderRight: `1px solid ${border}` }}>
-              {POEMS.map((p, i) => (
+              {poems.map((p, i) => (
                 <button key={i} onClick={() => setActivePoem(i)}
                   className={`poem-tab${activePoem === i ? " active" : ""}`}
                   style={{
@@ -551,16 +328,26 @@ export default function PoetPage() {
             </div>
 
             {/* Right panel — poem display */}
+            {poems.length > 0 && (
             <div key={activePoem} style={{ padding: "0 0 0 clamp(24px,4vw,52px)", animation: "fadeSlide 0.35s ease both" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
-                <h3 style={{ fontWeight: 700, fontSize: "clamp(18px,2.2vw,28px)", letterSpacing: "-0.01em", color: ink }}>{POEMS[activePoem].title}</h3>
-                <span style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: rustDim }}>{POEMS[activePoem].year} · {POEMS[activePoem].theme}</span>
-              </div>
-              <div style={{ fontSize: "clamp(13px,1.3vw,16px)", lineHeight: 2.1, whiteSpace: "pre-line", color: dim, maxWidth: 560 }}>
-                {POEMS[activePoem].lines}
-              </div>
-              <div style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: "rgba(28,24,20,0.22)", marginTop: 28 }}>— Whispers of the Eclipse, Elia Alghazal</div>
+              {(() => {
+                const idx = Math.min(activePoem, poems.length - 1);
+                const poem = poems[idx];
+                return (
+                  <>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
+                      <h3 style={{ fontWeight: 700, fontSize: "clamp(18px,2.2vw,28px)", letterSpacing: "-0.01em", color: ink }}>{poem.title}</h3>
+                      <span style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: rustDim }}>{poem.year} · {poem.theme}</span>
+                    </div>
+                    <div style={{ fontSize: "clamp(13px,1.3vw,16px)", lineHeight: 2.1, whiteSpace: "pre-line", color: dim, maxWidth: 560 }}>
+                      {poem.lines}
+                    </div>
+                    <div style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: "rgba(28,24,20,0.22)", marginTop: 28 }}>— Whispers of the Eclipse, Elia Alghazal</div>
+                  </>
+                );
+              })()}
             </div>
+            )}
           </div>
         </div>
       </section>
@@ -636,7 +423,7 @@ export default function PoetPage() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[
                 { label: "Email", href: "mailto:eliaghazal777@gmail.com" },
-                { label: "Amazon UK", href: "https://www.amazon.co.uk/Whispers-Eclipse-Elia-Ghazal/dp/9367950519" },
+                { label: "Book", href: "https://linktr.ee/eliaghazal" },
                 { label: "LinkedIn", href: "https://www.linkedin.com/in/eliaghazal/" },
               ].map(l => (
                 <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="contact-link"
