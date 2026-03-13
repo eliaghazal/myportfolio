@@ -236,16 +236,16 @@ export default function BlogPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      const p = localStorage.getItem("elia_posts");
-      if (p) {
+    fetch("/api/posts")
+      .then(r => r.ok ? r.json() : [])
+      .then((data: Array<Post & { read_time?: string }>) => {
         setAdminPosts(
-          (JSON.parse(p) as Post[])
+          data
             .filter(x => x.published ?? true)
-            .map(x => ({ ...x, isAdmin: true, available: true }))
+            .map(x => ({ ...x, readTime: x.read_time ?? x.readTime ?? "", isAdmin: true, available: true }))
         );
-      }
-    } catch { /* */ }
+      })
+      .catch(() => { /* silently fall back to seed posts */ });
   }, []);
 
   const handleOpen = (post: Post) => {
