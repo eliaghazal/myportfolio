@@ -62,14 +62,31 @@ export default function PoetPage() {
   const [poems, setPoems] = useState<Poem[]>(DEFAULT_POEMS);
   const [heroLines, setHeroLines] = useState<string[]>(DEFAULT_HERO_LINES);
 
+  /* Dynamic about/book content */
+  const [poetAboutHeading, setPoetAboutHeading] = useState("Writing was\nnever a choice.\nIt was survival.");
+  const [poetAboutBody, setPoetAboutBody]       = useState("Writing has always been my sanctuary — a guiding light through the darkest times. Without it, I would never have found the happiness that now colors my world.\n---\nWhispers of the Eclipse is born from the raw and unfiltered experiences of my life. A testament to the power of words to heal, to connect, and to transform.\n---\nI have always imagined my life as a sailing boat, bravely navigating the hazardous sea. Even when life gives you the worst waves — keep your boat afloat and sail away.");
+  const [poetBookTitle, setPoetBookTitle]       = useState("Whispers of the Eclipse");
+  const [poetBookDescription, setPoetBookDescription] = useState("A collection written across ages 15–19 — raw, unfiltered, and honest. Twenty-seven poems tracing love, loss, identity, resilience, and what it means to grow up in Lebanon.");
+  const [bookLink, setBookLink]                 = useState("https://linktr.ee/eliaghazal");
+
   /* Load content from DB (falls back to defaults above if DB is empty) */
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/settings?key=poems").then(r => r.ok ? r.json() : null).catch(() => null),
       fetch("/api/admin/settings?key=hero_lines").then(r => r.ok ? r.json() : null).catch(() => null),
-    ]).then(([po, hl]) => {
+      fetch("/api/admin/settings?key=poet_about_heading").then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/admin/settings?key=poet_about_body").then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/admin/settings?key=poet_book_title").then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/admin/settings?key=poet_book_description").then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/admin/settings?key=book_link").then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([po, hl, pah, pab, pbt, pbd, bl]) => {
       if (po?.value) try { setPoems(JSON.parse(po.value)); } catch { /* keep defaults */ }
       if (hl?.value) try { setHeroLines(JSON.parse(hl.value)); } catch { /* keep defaults */ }
+      if (pah?.value) try { setPoetAboutHeading(JSON.parse(pah.value)); } catch { /* keep defaults */ }
+      if (pab?.value) try { setPoetAboutBody(JSON.parse(pab.value)); } catch { /* keep defaults */ }
+      if (pbt?.value) try { setPoetBookTitle(JSON.parse(pbt.value)); } catch { /* keep defaults */ }
+      if (pbd?.value) try { setPoetBookDescription(JSON.parse(pbd.value)); } catch { /* keep defaults */ }
+      if (bl?.value) try { setBookLink(JSON.parse(bl.value)); } catch { /* keep defaults */ }
     });
   }, []);
 
@@ -207,20 +224,18 @@ export default function PoetPage() {
             <div ref={aboutHead}>
               <div style={{ ...mono, fontSize: 10, letterSpacing: "0.3em", color: rustDim, marginBottom: 20, textTransform: "uppercase" }}>// About</div>
               <h2 style={{ fontWeight: 700, fontSize: "clamp(28px,4vw,52px)", lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 32, color: ink }}>
-                Writing was<br />never a choice.<br />
-                <span style={{ color: rust }}>It was survival.</span>
+                {poetAboutHeading.split("\n").map((line, i, arr) => {
+                  const isLast = i === arr.length - 1;
+                  return isLast
+                    ? <span key={i} style={{ color: rust }}>{line}</span>
+                    : <span key={i}>{line}<br /></span>;
+                })}
               </h2>
             </div>
             <div ref={aboutBody}>
-              <p style={{ fontSize: "clamp(13px,1.2vw,15px)", color: dim, lineHeight: 1.88, marginBottom: 18 }}>
-                Writing has always been my sanctuary — a guiding light through the darkest times. Without it, I would never have found the happiness that now colors my world.
-              </p>
-              <p style={{ fontSize: "clamp(13px,1.2vw,15px)", color: dim, lineHeight: 1.88, marginBottom: 18 }}>
-                <em>Whispers of the Eclipse</em> is born from the raw and unfiltered experiences of my life. A testament to the power of words to heal, to connect, and to transform. The poems within are infused with the emotions that shaped me — friendships, family, anger, sadness, and the tender moments of love.
-              </p>
-              <p style={{ fontSize: "clamp(13px,1.2vw,15px)", color: dim, lineHeight: 1.88 }}>
-                I have always imagined my life as a sailing boat, bravely navigating the hazardous sea. Even when life gives you the worst waves — keep your boat afloat and sail away.
-              </p>
+              {poetAboutBody.split("\n---\n").map((para, i) => (
+                <p key={i} style={{ fontSize: "clamp(13px,1.2vw,15px)", color: dim, lineHeight: 1.88, marginBottom: 18 }}>{para}</p>
+              ))}
             </div>
           </div>
 
@@ -274,15 +289,18 @@ export default function PoetPage() {
           <div style={{ color: paper }}>
             <div style={{ ...mono, fontSize: 10, letterSpacing: "0.3em", color: rustDim, marginBottom: 18, textTransform: "uppercase" }}>// The Book</div>
             <h2 style={{ fontWeight: 700, fontSize: "clamp(24px,3.5vw,44px)", lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 20, color: paper }}>
-              Whispers of<br /><span style={{ color: rust }}>the Eclipse</span>
+              {poetBookTitle.includes("Eclipse")
+                ? <>{poetBookTitle.split("Eclipse")[0]}<span style={{ color: rust }}>Eclipse</span></>
+                : <span style={{ color: rust }}>{poetBookTitle}</span>
+              }
             </h2>
             <p style={{ fontSize: "clamp(12px,1.2vw,14px)", color: "rgba(244,241,236,0.55)", lineHeight: 1.9, marginBottom: 20, maxWidth: 480 }}>
-              A collection written across ages 15–19 — raw, unfiltered, and honest. Twenty-seven poems tracing love, loss, identity, resilience, and what it means to grow up in Lebanon.
+              {poetBookDescription}
             </p>
             <p style={{ fontSize: "clamp(12px,1.2vw,14px)", color: "rgba(244,241,236,0.55)", lineHeight: 1.9, marginBottom: 32, maxWidth: 480 }}>
               A Love, Loss, and Identity collection — published by Ukiyoto Publishing in 2024.
             </p>
-            <a href="https://linktr.ee/eliaghazal"
+            <a href={bookLink}
               target="_blank" rel="noopener noreferrer" style={{
                 ...mono, fontSize: 11, letterSpacing: "0.2em",
                 padding: "13px 32px", background: rust, color: paper,

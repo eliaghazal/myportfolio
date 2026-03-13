@@ -13,12 +13,21 @@ export interface Post {
   content: string;
   read_time: string;
   published: boolean;
+  category?: string;
   created_at?: string;
 }
 
-export async function getPosts(all = false): Promise<Post[]> {
+export async function getPosts(all = false, category?: string): Promise<Post[]> {
   if (all) {
+    if (category) {
+      const { rows } = await sql`SELECT * FROM posts WHERE category = ${category} ORDER BY created_at DESC`;
+      return rows as Post[];
+    }
     const { rows } = await sql`SELECT * FROM posts ORDER BY created_at DESC`;
+    return rows as Post[];
+  }
+  if (category) {
+    const { rows } = await sql`SELECT * FROM posts WHERE published = true AND category = ${category} ORDER BY created_at DESC`;
     return rows as Post[];
   }
   const { rows } = await sql`SELECT * FROM posts WHERE published = true ORDER BY created_at DESC`;
@@ -27,8 +36,8 @@ export async function getPosts(all = false): Promise<Post[]> {
 
 export async function createPost(post: Omit<Post, "created_at">): Promise<Post> {
   const { rows } = await sql`
-    INSERT INTO posts (id, title, date, tag, excerpt, content, read_time, published)
-    VALUES (${post.id}, ${post.title}, ${post.date}, ${post.tag}, ${post.excerpt}, ${post.content}, ${post.read_time}, ${post.published})
+    INSERT INTO posts (id, title, date, tag, excerpt, content, read_time, published, category)
+    VALUES (${post.id}, ${post.title}, ${post.date}, ${post.tag}, ${post.excerpt}, ${post.content}, ${post.read_time}, ${post.published}, ${post.category ?? "blog"})
     RETURNING *
   `;
   return rows[0] as Post;
@@ -43,7 +52,8 @@ export async function updatePost(id: string, post: Partial<Post>): Promise<Post>
       excerpt   = COALESCE(${post.excerpt ?? null}, excerpt),
       content   = COALESCE(${post.content ?? null}, content),
       read_time = COALESCE(${post.read_time ?? null}, read_time),
-      published = COALESCE(${post.published ?? null}, published)
+      published = COALESCE(${post.published ?? null}, published),
+      category  = COALESCE(${post.category ?? null}, category)
     WHERE id = ${id}
     RETURNING *
   `;
@@ -64,6 +74,7 @@ export interface GalleryItem {
   image_url?: string;
   caption?: string;
   rotation?: number;
+  aspect_ratio?: "original" | "1:1" | "16:9" | "3:4" | "21:9";
   created_at?: string;
 }
 
@@ -74,8 +85,8 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
 
 export async function createGalleryItem(item: Omit<GalleryItem, "created_at">): Promise<GalleryItem> {
   const { rows } = await sql`
-    INSERT INTO gallery_items (id, type, text, poem, image_url, caption, rotation)
-    VALUES (${item.id}, ${item.type}, ${item.text ?? null}, ${item.poem ?? null}, ${item.image_url ?? null}, ${item.caption ?? null}, ${item.rotation ?? null})
+    INSERT INTO gallery_items (id, type, text, poem, image_url, caption, rotation, aspect_ratio)
+    VALUES (${item.id}, ${item.type}, ${item.text ?? null}, ${item.poem ?? null}, ${item.image_url ?? null}, ${item.caption ?? null}, ${item.rotation ?? null}, ${item.aspect_ratio ?? "1:1"})
     RETURNING *
   `;
   return rows[0] as GalleryItem;

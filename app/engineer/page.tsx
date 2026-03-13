@@ -259,96 +259,101 @@ const TERMINAL_PROJECTS = [
   { name: "Library Mgmt System",    status: "AWARD 🥈",  tech: "Java + SQL" },
 ];
 
-const TERMINAL_COMMANDS: Record<string, () => string[]> = {
-  help: () => [
-    "  Available commands:",
-    "  ─────────────────────────────────────────",
-    "  help              List all commands",
-    "  about             About Elia",
-    "  projects          Featured projects",
-    "  skills            Tech stack",
-    "  contact           Contact links",
-    "  certs             Certifications",
-    "  whoami            Current user",
-    "  pwd               Current directory",
-    "  ls                List files",
-    "  cat about.txt     Read about file",
-    "  resume            Resume summary",
-    "  clear             Clear terminal",
-    "  sudo hire elia    Try it ;)",
-    "  echo [text]       Echo back",
-  ],
-  about: () => [
-    "  Name:       Elia Ghazal",
-    "  Location:   Lebanon → the world",
-    "  Role:       Engineer / Poet / Builder",
-    "  School:     AUST Computer Science (2026)",
-    "  Standing:   Honor's List",
-    "  Motto:      The impossible, made.",
-  ],
-  projects: () => [
-    "  ┌────────────────────────────────────────────────────┐",
-    "  │ PROJECT                 STATUS      TECH           │",
-    "  ├────────────────────────────────────────────────────┤",
-    ...TERMINAL_PROJECTS.map(p =>
-      `  │ ${p.name.padEnd(24)} ${p.status.padEnd(11)} ${p.tech.slice(0,14).padEnd(14)} │`
-    ),
-    "  └────────────────────────────────────────────────────┘",
-  ],
-  skills: () => [
-    "  Languages:    Python, TypeScript, Java, Kotlin, C++, Swift",
-    "  AI / ML:      PyTorch, DistilBERT, scikit-learn, NumPy",
-    "  Backend:      Spring Boot, Node.js, REST API, Microservices",
-    "  Frontend:     React, Next.js, GSAP, Canvas API",
-    "  Mobile:       Flutter, Kotlin Android, Swift iOS",
-    "  IoT:          Raspberry Pi, 4G Module, IMU / GPS, Edge AI",
-    "  DevOps:       Git, Docker, GitLab, Linux",
-    "  Databases:    SQL, MongoDB, PostgreSQL",
-  ],
-  contact: () => [
-    "  Email:    eliaghazal777@gmail.com",
-    "  LinkedIn: linkedin.com/in/eliaghazal",
-    "  GitHub:   github.com/eliaghazal",
-  ],
-  certs: () => [
-    "  TOEFL iBT                   ETS                  99/120  (Sep 2025)",
-    "  CCNA: Switching & Routing   Cisco                        (Jan 2025)",
-    "  Introduction to Networks    Cisco                        (Dec 2024)",
-    "  IT Essentials               Cisco                        (Feb 2024)",
-    "  IT Specialist — Python      Certiport / Pearson VUE      (Jan 2024)",
-    "  ECPE — C2 Proficiency       University of Michigan        (Dec 2023)",
-    "  DELF B2                     République française          (Oct 2022)",
-  ],
-  resume: () => [
-    "  Elia Ghazal — Computer Science @ AUST (2026)",
-    "  ─────────────────────────────────────────────",
-    "  ✦  9+ projects built and deployed",
-    "  ✦  7 certifications earned",
-    "  ✦  1st Place — AUST Coding Expo (Student Mgmt System)",
-    "  ✦  Published author: Whispers of the Eclipse",
-    "  ✦  Founder: TwoFoundersLab (Crypto, DFA Minimizer, ...)",
-    "  ✦  Fluent: Arabic, English (C2), French (B2), Italian",
-    "",
-    "  [Download PDF] → linkedin.com/in/eliaghazal",
-  ],
-  whoami: () => ["  elia_ghazal"],
-  pwd:    () => ["  /home/elia/portfolio"],
-  ls:     () => ["  projects/  skills/  about.txt  contact.md  resume.pdf  lab/"],
-  "cat about.txt": () => TERMINAL_COMMANDS.about(),
-  "sudo hire elia": () => [
-    "  [sudo] password for universe: ********",
-    "  Checking qualifications...",
-    "  ✓ Builds IoT ecosystems at 3am",
-    "  ✓ Writes poetry AND Python",
-    "  ✓ Won coding expo, got TOEFL 99, ships code, publishes books",
-    "  ✓ Obsessively solves the impossible",
-    "  Access granted. Sending offer letter... 📨",
-  ],
-};
+function makeTerminalCommands(terminalAbout: string): Record<string, () => string[]> {
+  const aboutLines = terminalAbout.split("\n").filter(l => l.trim());
+  const cmds: Record<string, () => string[]> = {
+    help: () => [
+      "  Available commands:",
+      "  ─────────────────────────────────────────",
+      "  help              List all commands",
+      "  about             About Elia",
+      "  projects          Featured projects",
+      "  skills            Tech stack",
+      "  contact           Contact links",
+      "  certs             Certifications",
+      "  whoami            Current user",
+      "  pwd               Current directory",
+      "  ls                List files",
+      "  cat about.txt     Read about file",
+      "  resume            Resume summary",
+      "  clear             Clear terminal",
+      "  sudo hire elia    Try it ;)",
+      "  echo [text]       Echo back",
+    ],
+    about: () => aboutLines.length ? aboutLines : [
+      "  Name:       Elia Ghazal",
+      "  Location:   Lebanon → the world",
+      "  Role:       Engineer / Poet / Builder",
+      "  School:     AUST Computer Science (2026)",
+      "  Standing:   Honor's List",
+      "  Motto:      The impossible, made.",
+    ],
+    projects: () => [
+      "  ┌────────────────────────────────────────────────────┐",
+      "  │ PROJECT                 STATUS      TECH           │",
+      "  ├────────────────────────────────────────────────────┤",
+      ...TERMINAL_PROJECTS.map(p =>
+        `  │ ${p.name.padEnd(24)} ${p.status.padEnd(11)} ${p.tech.slice(0,14).padEnd(14)} │`
+      ),
+      "  └────────────────────────────────────────────────────┘",
+    ],
+    skills: () => [
+      "  Languages:    Python, TypeScript, Java, Kotlin, C++, Swift",
+      "  AI / ML:      PyTorch, DistilBERT, scikit-learn, NumPy",
+      "  Backend:      Spring Boot, Node.js, REST API, Microservices",
+      "  Frontend:     React, Next.js, GSAP, Canvas API",
+      "  Mobile:       Flutter, Kotlin Android, Swift iOS",
+      "  IoT:          Raspberry Pi, 4G Module, IMU / GPS, Edge AI",
+      "  DevOps:       Git, Docker, GitLab, Linux",
+      "  Databases:    SQL, MongoDB, PostgreSQL",
+    ],
+    contact: () => [
+      "  Email:    eliaghazal777@gmail.com",
+      "  LinkedIn: linkedin.com/in/eliaghazal",
+      "  GitHub:   github.com/eliaghazal",
+    ],
+    certs: () => [
+      "  TOEFL iBT                   ETS                  99/120  (Sep 2025)",
+      "  CCNA: Switching & Routing   Cisco                        (Jan 2025)",
+      "  Introduction to Networks    Cisco                        (Dec 2024)",
+      "  IT Essentials               Cisco                        (Feb 2024)",
+      "  IT Specialist — Python      Certiport / Pearson VUE      (Jan 2024)",
+      "  ECPE — C2 Proficiency       University of Michigan        (Dec 2023)",
+      "  DELF B2                     République française          (Oct 2022)",
+    ],
+    resume: () => [
+      "  Elia Ghazal — Computer Science @ AUST (2026)",
+      "  ─────────────────────────────────────────────",
+      "  ✦  9+ projects built and deployed",
+      "  ✦  7 certifications earned",
+      "  ✦  1st Place — AUST Coding Expo (Student Mgmt System)",
+      "  ✦  Published author: Whispers of the Eclipse",
+      "  ✦  Founder: TwoFoundersLab (Crypto, DFA Minimizer, ...)",
+      "  ✦  Fluent: Arabic, English (C2), French (B2), Italian",
+      "",
+      "  [Download PDF] → linkedin.com/in/eliaghazal",
+    ],
+    whoami: () => ["  elia_ghazal"],
+    pwd:    () => ["  /home/elia/portfolio"],
+    ls:     () => ["  projects/  skills/  about.txt  contact.md  resume.pdf  lab/"],
+    "sudo hire elia": () => [
+      "  [sudo] password for universe: ********",
+      "  Checking qualifications...",
+      "  ✓ Builds IoT ecosystems at 3am",
+      "  ✓ Writes poetry AND Python",
+      "  ✓ Won coding expo, got TOEFL 99, ships code, publishes books",
+      "  ✓ Obsessively solves the impossible",
+      "  Access granted. Sending offer letter... 📨",
+    ],
+  };
+  cmds["cat about.txt"] = cmds.about;
+  return cmds;
+}
 
-function TerminalSection() {
+function TerminalSection({ terminalAbout }: { terminalAbout: string }) {
   const gn = "#39ff14";
   const mono: React.CSSProperties = { fontFamily: "var(--font-mono)" };
+  const TERMINAL_COMMANDS = makeTerminalCommands(terminalAbout);
 
   const [history, setHistory]     = useState<Array<{ cmd: string; output: string[] }>>([
     { cmd: "", output: ["  Welcome to Elia's portfolio terminal.", "  Type 'help' to see available commands.", ""] },
@@ -389,7 +394,8 @@ function TerminalSection() {
     }
 
     setHistory(prev => [...prev, { cmd: raw, output }]);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terminalAbout]);
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { run(input); setInput(""); return; }
@@ -597,19 +603,45 @@ export default function EngineerPage() {
   const [awards, setAwards]         = useState<Award[]>(DEFAULT_AWARDS);
   const [stats, setStats]           = useState<Stat[]>(DEFAULT_STATS);
 
+  /* About/terminal content */
+  const [engAboutHeading, setEngAboutHeading]     = useState("I don't wait for the\nright moment.\nI build it.");
+  const [engAboutBody, setEngAboutBody]           = useState("From a bedroom in Lebanon to published poet, award-winning developer, and IoT architect — I've learned that pressure doesn't break you, it compiles you.\n---\nI'm studying Computer Science at AUST (graduating June 2026), building CrashLens and MysteryPersona while carrying a full course load — and writing poetry that ends up on Amazon.\n---\nThat's not luck. That's obsession.");
+  const [engAboutManifesto, setEngAboutManifesto] = useState("The impossible, made.");
+  const [engTerminalAbout, setEngTerminalAbout]   = useState("  Name:       Elia Ghazal\n  Location:   Lebanon → the world\n  Role:       Engineer / Poet / Builder\n  School:     AUST Computer Science (2026)\n  Standing:   Honor's List\n  Motto:      The impossible, made.");
+  const [engBeyondCode, setEngBeyondCode]         = useState<Array<{t:string;d:string}>>([
+    { t: "AI Workshop", d: "Attended regional AI/ML workshop — explored transformer architectures and edge deployment." },
+    { t: "Environmental Seminar", d: "Participated in AUST environmental sustainability seminar series." },
+    { t: "Whispers of the Eclipse", d: "Published debut poetry collection at 19 — 27 poems, Ukiyoto Publishing, 2024." },
+  ]);
+
+  /* Devlog posts */
+  interface DevlogPost { id: string; title: string; date: string; tag: string; excerpt: string; read_time: string; }
+  const [devlogPosts, setDevlogPosts] = useState<DevlogPost[]>([]);
+
   /* Load content from DB (falls back to defaults above if DB is empty) */
   useEffect(() => {
-    const keys = ["featured_projects","other_projects","skills","certs","awards","stats"];
+    const keys = [
+      "featured_projects","other_projects","skills","certs","awards","stats",
+      "engineer_about_heading","engineer_about_body","engineer_about_manifesto",
+      "engineer_terminal_about","engineer_beyond_code",
+    ];
     Promise.all(keys.map(k =>
       fetch(`/api/admin/settings?key=${k}`).then(r => r.ok ? r.json() : null).catch(() => null)
-    )).then(([fp, op, sk, ce, aw, st]) => {
+    )).then(([fp, op, sk, ce, aw, st, eah, eab, eam, eta, ebc]) => {
       if (fp?.value) try { setFeatured(JSON.parse(fp.value)); } catch { /* keep defaults */ }
       if (op?.value) try { setOtherProjs(JSON.parse(op.value)); } catch { /* keep defaults */ }
       if (sk?.value) try { setSkills(JSON.parse(sk.value)); } catch { /* keep defaults */ }
       if (ce?.value) try { setCerts(JSON.parse(ce.value)); } catch { /* keep defaults */ }
       if (aw?.value) try { setAwards(JSON.parse(aw.value)); } catch { /* keep defaults */ }
       if (st?.value) try { setStats(JSON.parse(st.value)); } catch { /* keep defaults */ }
+      if (eah?.value) try { setEngAboutHeading(JSON.parse(eah.value)); } catch { /* keep defaults */ }
+      if (eab?.value) try { setEngAboutBody(JSON.parse(eab.value)); } catch { /* keep defaults */ }
+      if (eam?.value) try { setEngAboutManifesto(JSON.parse(eam.value)); } catch { /* keep defaults */ }
+      if (eta?.value) try { setEngTerminalAbout(JSON.parse(eta.value)); } catch { /* keep defaults */ }
+      if (ebc?.value) try { setEngBeyondCode(JSON.parse(ebc.value)); } catch { /* keep defaults */ }
     });
+    // Load devlog posts
+    fetch("/api/posts?category=devlog").then(r => r.ok ? r.json() : []).then(setDevlogPosts).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -694,7 +726,7 @@ export default function EngineerPage() {
           onMouseLeave={e=>(e.currentTarget.style.color="rgba(255,255,255,0.38)")}
         >← HOME</Link>
         <div style={{ display:"flex", gap:"clamp(16px,3vw,36px)", alignItems:"center" }}>
-          {["work","about","skills","certs","contact"].map(id => (
+          {["work","about","skills","certs","devlog","contact"].map(id => (
             <button key={id} onClick={()=>scroll(id)} style={{
               background:"none", border:"none", cursor:"pointer",
               ...mono, fontSize:10, letterSpacing:"0.2em",
@@ -809,22 +841,27 @@ export default function EngineerPage() {
             {eyebrow("About", eyebrowAbout)}
             <div ref={h2About}>
               <h2 style={{ fontWeight:700, fontSize:"clamp(26px,3.5vw,44px)",
-                lineHeight:1.18, marginBottom:32, letterSpacing:"-0.02em" }}>
-                I don't wait for the<br />
-                <span style={{ color:"#39ff14" }}>right moment.</span><br />
-                I build it.
+                lineHeight:1.18, marginBottom:32, letterSpacing:"-0.02em", whiteSpace:"pre-line" }}>
+                {engAboutHeading.split("\n").map((line, i, arr) => {
+                  const isLast = i === arr.length - 1;
+                  return isLast
+                    ? <span key={i} style={{ color:"#39ff14" }}>{line}</span>
+                    : <span key={i}>{line}<br /></span>;
+                })}
               </h2>
             </div>
             <div ref={manifestoRef}>
-              <p style={{ color:"rgba(255,255,255,0.5)", fontSize:"clamp(13px,1.2vw,15px)", lineHeight:1.85, marginBottom:16 }}>
-                From a bedroom in Lebanon to published poet, award-winning developer, and IoT architect — I've learned that pressure doesn't break you, it compiles you.
-              </p>
-              <p style={{ color:"rgba(255,255,255,0.5)", fontSize:"clamp(13px,1.2vw,15px)", lineHeight:1.85, marginBottom:16 }}>
-                I'm studying Computer Science at AUST (graduating June 2026), building CrashLens and MysteryPersona while carrying a full course load — and writing poetry that ends up on Amazon.
-              </p>
-              <p style={{ color:"rgba(255,255,255,0.5)", fontSize:"clamp(13px,1.2vw,15px)", lineHeight:1.85 }}>
-                That's not luck. That's <span style={{ color:"#39ff14" }}>obsession.</span>
-              </p>
+              {engAboutBody.split("\n---\n").map((para, i, arr) => (
+                <p key={i} style={{ color:"rgba(255,255,255,0.5)", fontSize:"clamp(13px,1.2vw,15px)", lineHeight:1.85, marginBottom: i < arr.length - 1 ? 16 : 0 }}>
+                  {i === arr.length - 1
+                    ? para.split(engAboutManifesto).map((part, j, pArr) =>
+                        j < pArr.length - 1
+                          ? <span key={j}>{part}<span style={{ color:"#39ff14" }}>{engAboutManifesto}</span></span>
+                          : <span key={j}>{part}</span>
+                      )
+                    : para}
+                </p>
+              ))}
             </div>
           </div>
 
@@ -859,7 +896,7 @@ export default function EngineerPage() {
       </section>
 
       {/* ── TERMINAL ── */}
-      <TerminalSection />
+      <TerminalSection terminalAbout={engTerminalAbout} />
 
       {/* ── PROJECTS ── */}
       <section id="work" style={{ ...sec, background:"#000" }}>
@@ -1154,11 +1191,7 @@ export default function EngineerPage() {
 
               <div style={{ ...mono, fontSize:9, letterSpacing:"0.25em",
                 color:"rgba(255,255,255,0.25)", marginBottom:16, textTransform:"uppercase" }}>Beyond the Code</div>
-              {[
-                { t:"AI Workshop — High School Students", d:"Designed + delivered a 2-hour prompt engineering workshop. Students built an AI chatbot/web-app concept." },
-                { t:"Environmental Seminar Speaker",      d:"Delivered a seminar on climate change risk — communicating complex science for a broad audience." },
-                { t:"Whispers of the Eclipse",           d:"Published poetry collection. Written ages 15–19." },
-              ].map(e => (
+              {engBeyondCode.map(e => (
                 <div key={e.t} className="hover-lift" style={{ padding:"13px 14px", background:"#080808",
                   border:"1px solid rgba(255,255,255,0.05)", marginBottom:1,
                   transition:"background 0.2s, transform 0.3s" }}
@@ -1171,6 +1204,54 @@ export default function EngineerPage() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── DEVLOG ── */}
+      <section id="devlog" style={{ ...sec, background:"#000", borderTop:"1px solid rgba(255,255,255,0.04)" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <div style={{ ...mono, fontSize:10, letterSpacing:"0.35em", color:"rgba(57,255,20,0.65)", marginBottom:14, textTransform:"uppercase" }}>{"// Devlog"}</div>
+          <h2 style={{ fontWeight:700, fontSize:"clamp(28px,4vw,52px)", letterSpacing:"-0.02em", marginBottom:48 }}>Engineering Journal</h2>
+          {devlogPosts.length === 0 ? (
+            <div style={{ padding:"40px 28px", border:"1px dashed rgba(57,255,20,0.12)", display:"flex", flexDirection:"column", gap:10, alignItems:"flex-start" }}>
+              <div style={{ ...mono, fontSize:10, letterSpacing:"0.2em", color:"rgba(57,255,20,0.4)" }}>// coming_soon.md</div>
+              <div style={{ color:"rgba(255,255,255,0.25)", fontSize:14, lineHeight:1.7 }}>No devlog posts yet. Engineering discoveries coming soon.</div>
+            </div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+              {devlogPosts.map(post => (
+                <Link key={post.id} href={`/engineer/devlog/${post.id}`} style={{ textDecoration:"none" }}>
+                  <div className="hover-lift" style={{
+                    padding:"clamp(18px,2.5vw,28px) clamp(20px,3vw,36px)",
+                    background:"#080808", border:"1px solid rgba(255,255,255,0.05)",
+                    borderLeft:"2px solid rgba(57,255,20,0.3)",
+                    display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:24,
+                    transition:"background 0.2s, border-color 0.25s, transform 0.3s",
+                  }}
+                    onMouseEnter={e=>{
+                      (e.currentTarget as HTMLDivElement).style.background="#0d0d0d";
+                      (e.currentTarget as HTMLDivElement).style.borderLeftColor="#39ff14";
+                    }}
+                    onMouseLeave={e=>{
+                      (e.currentTarget as HTMLDivElement).style.background="#080808";
+                      (e.currentTarget as HTMLDivElement).style.borderLeftColor="rgba(57,255,20,0.3)";
+                    }}
+                  >
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:10, flexWrap:"wrap" }}>
+                        <span style={{ ...mono, fontSize:9, padding:"2px 8px", background:"rgba(57,255,20,0.08)", color:"#39ff14", border:"1px solid rgba(57,255,20,0.2)" }}>{post.tag}</span>
+                        <span style={{ ...mono, fontSize:9, color:"rgba(255,255,255,0.28)" }}>{post.date}</span>
+                        <span style={{ ...mono, fontSize:9, color:"rgba(255,255,255,0.28)" }}>{post.read_time}</span>
+                      </div>
+                      <div style={{ fontWeight:600, fontSize:"clamp(15px,1.6vw,20px)", marginBottom:8, color:"#fff" }}>{post.title}</div>
+                      <div style={{ color:"rgba(255,255,255,0.38)", fontSize:13, lineHeight:1.7 }}>{post.excerpt}</div>
+                    </div>
+                    <div style={{ ...mono, fontSize:10, color:"rgba(57,255,20,0.5)", flexShrink:0 }}>READ →</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

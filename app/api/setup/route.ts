@@ -53,6 +53,10 @@ export async function GET() {
       )
     `;
 
+    // Add new columns gracefully
+    try { await sql`ALTER TABLE gallery_items ADD COLUMN IF NOT EXISTS aspect_ratio TEXT DEFAULT '1:1'`; } catch { /* already exists */ }
+    try { await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'blog'`; } catch { /* already exists */ }
+
     const seedResult = await runSeed();
 
     return NextResponse.json({
