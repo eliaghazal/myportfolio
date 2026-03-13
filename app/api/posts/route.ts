@@ -9,9 +9,6 @@ function isAuthorized(req: NextRequest): boolean {
 export async function GET(req: NextRequest) {
   try {
     const all = req.nextUrl.searchParams.get("all") === "true";
-    if (all && !isAuthorized(req)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const posts = await getPosts(all);
     return NextResponse.json(posts);
   } catch (err) {

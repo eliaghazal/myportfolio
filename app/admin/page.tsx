@@ -335,6 +335,19 @@ export default function AdminPage() {
     } catch { showToast("Network error", false); }
   };
 
+  const handleSeed = async () => {
+    try {
+      const res = await apiFetch("/api/seed", { method: "POST", auth: password });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(data.message ?? "Seed data imported!");
+        await Promise.all([loadPosts(password), loadGallery(password), loadLabs(password)]);
+      } else {
+        showToast("Seed failed", false);
+      }
+    } catch { showToast("Network error", false); }
+  };
+
   const F  = postForm;
   const SF = setPostForm;
   const LF = labForm;
@@ -362,6 +375,9 @@ export default function AdminPage() {
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input value={workingOnInput} onChange={e => setWorkingOnInput(e.target.value)} placeholder="Currently working on…" style={{ ...inputStyle, width: 200, padding: "5px 10px", fontSize: 11 }} />
           <button onClick={saveWorkingOn} style={{ ...btnStyle(green), padding: "5px 10px", fontSize: 9 }}>Save</button>
+          {!posts.find(p => p.id === "001") && (
+            <button onClick={handleSeed} style={{ ...btnStyle("#7c3aed"), padding: "5px 10px", fontSize: 9 }}>SEED INITIAL DATA</button>
+          )}
           <a href="/poet/blog" target="_blank" style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", color: dim, textDecoration: "none", padding: "6px 12px", border: `1px solid ${border}` }}>↗ BLOG</a>
           <a href="/poet/gallery" target="_blank" style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", color: dim, textDecoration: "none", padding: "6px 12px", border: `1px solid ${border}` }}>↗ GALLERY</a>
           <a href="/engineer/lab" target="_blank" style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", color: dim, textDecoration: "none", padding: "6px 12px", border: `1px solid ${border}` }}>↗ LAB</a>

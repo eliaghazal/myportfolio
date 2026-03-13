@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
+import { runSeed } from "@/app/api/seed/route";
 
 export async function GET() {
   try {
@@ -52,7 +53,13 @@ export async function GET() {
       )
     `;
 
-    return NextResponse.json({ ok: true, message: "Database tables created successfully." });
+    const seedResult = await runSeed();
+
+    return NextResponse.json({
+      ok: true,
+      message: "Database tables created successfully.",
+      seeded: seedResult,
+    });
   } catch (err) {
     console.error("Setup error:", err);
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });

@@ -21,14 +21,6 @@ interface GalleryItem {
   rotation?: number;
 }
 
-const SEED_GALLERY: GalleryItem[] = [
-  { id: "g1", type: "quote", text: "The eclipse doesn't steal the sun. It only proves that something brilliant can survive being covered.", poem: "Whispers of the Eclipse", rotation: -2.1 },
-  { id: "g2", type: "quote", text: "Write. Even when it hurts. Especially when it hurts.", poem: "Personal note", rotation: 1.8 },
-  { id: "g3", type: "quote", text: "I have always imagined my life as a sailing boat, bravely navigating the hazardous sea.", poem: "Introduction", rotation: -1.2 },
-  { id: "g4", type: "quote", text: "My heart, the believer, wanted it so badly that reality was excommunicated.", poem: "When Will I Learn?", rotation: 2.5 },
-  { id: "g5", type: "quote", text: "She never lost her trust.", poem: "Rosalyn", rotation: -0.8 },
-  { id: "g6", type: "quote", text: "Land of God — cedars so tall and resilient, no storm can make you fall.", poem: "Land of God", rotation: 1.4 },
-];
 
 const POEM_REEL = [
   { line: "Come all,", sub: "we're witnessing the eclipse.", poem: "The Ghost of Town" },
@@ -212,7 +204,7 @@ function Polaroid({ item }: { item: GalleryItem }) {
 /* ── Page ── */
 export default function GalleryPage() {
   const [scrolled, setScrolled] = useState(false);
-  const [items, setItems] = useState<GalleryItem[]>(SEED_GALLERY);
+  const [items, setItems] = useState<GalleryItem[]>([]);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 48);
@@ -227,9 +219,9 @@ export default function GalleryPage() {
           ...item,
           imageUrl: item.image_url ?? item.imageUrl,
         }));
-        setItems([...SEED_GALLERY, ...mapped]);
+        setItems(mapped);
       })
-      .catch(() => { /* silently fall back to seed gallery */ });
+      .catch(() => {});
   }, []);
 
   const headRef = useFade(0);
