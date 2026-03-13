@@ -330,14 +330,22 @@ export default function PoetPage() {
             {/* Right panel — poem display */}
             {poems.length > 0 && (
             <div key={activePoem} style={{ padding: "0 0 0 clamp(24px,4vw,52px)", animation: "fadeSlide 0.35s ease both" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
-                <h3 style={{ fontWeight: 700, fontSize: "clamp(18px,2.2vw,28px)", letterSpacing: "-0.01em", color: ink }}>{poems[Math.min(activePoem, poems.length - 1)].title}</h3>
-                <span style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: rustDim }}>{poems[Math.min(activePoem, poems.length - 1)].year} · {poems[Math.min(activePoem, poems.length - 1)].theme}</span>
-              </div>
-              <div style={{ fontSize: "clamp(13px,1.3vw,16px)", lineHeight: 2.1, whiteSpace: "pre-line", color: dim, maxWidth: 560 }}>
-                {poems[Math.min(activePoem, poems.length - 1)].lines}
-              </div>
-              <div style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: "rgba(28,24,20,0.22)", marginTop: 28 }}>— Whispers of the Eclipse, Elia Alghazal</div>
+              {(() => {
+                const idx = Math.min(activePoem, poems.length - 1);
+                const poem = poems[idx];
+                return (
+                  <>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
+                      <h3 style={{ fontWeight: 700, fontSize: "clamp(18px,2.2vw,28px)", letterSpacing: "-0.01em", color: ink }}>{poem.title}</h3>
+                      <span style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: rustDim }}>{poem.year} · {poem.theme}</span>
+                    </div>
+                    <div style={{ fontSize: "clamp(13px,1.3vw,16px)", lineHeight: 2.1, whiteSpace: "pre-line", color: dim, maxWidth: 560 }}>
+                      {poem.lines}
+                    </div>
+                    <div style={{ ...mono, fontSize: 9, letterSpacing: "0.2em", color: "rgba(28,24,20,0.22)", marginTop: 28 }}>— Whispers of the Eclipse, Elia Alghazal</div>
+                  </>
+                );
+              })()}
             </div>
             )}
           </div>

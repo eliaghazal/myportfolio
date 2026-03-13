@@ -13,6 +13,12 @@ export async function GET() {
     if (!cvUrl) {
       return NextResponse.json({ error: "No CV uploaded yet" }, { status: 404 });
     }
+    // Validate that cvUrl is an absolute URL before redirecting
+    try {
+      new URL(cvUrl);
+    } catch {
+      return NextResponse.json({ error: "Invalid CV URL stored" }, { status: 500 });
+    }
     return NextResponse.redirect(cvUrl);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
