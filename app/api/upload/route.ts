@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     const blob = await put(file.name, file, {
       access: "public",
       contentType,
+      addRandomSuffix: true,
     });
 
     return NextResponse.json({ url: blob.url, type: isVideo ? "video" : "image" }, { status: 201 });
